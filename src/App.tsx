@@ -40,6 +40,9 @@ function readInitialMap() {
 export function App() {
   const [initial] = useState(readInitialMap);
   const [map, setMap] = useState(initial.map);
+  const [measurements, setMeasurements] = useState<
+    Record<string, { width: number; height: number }>
+  >({});
   const [saveError, setSaveError] = useState(initial.error);
   const [presentation, setPresentation] = useState(true);
   const [selected, setSelected] = useState<{
@@ -164,6 +167,7 @@ export function App() {
     id: n.id,
     type: "technique",
     position: n.position,
+    measured: measurements[n.id],
     data: { ...n, presentation, connecting: start === n.id },
     selected: !presentation && selected?.id === n.id,
     ariaLabel: n.title,
@@ -279,6 +283,25 @@ export function App() {
           zoomOnPinch
           autoPanOnNodeDrag={false}
           onNodesChange={(changes) => {
+            const dimensions = changes.filter(
+              (change) => change.type === "dimensions",
+            );
+            if (dimensions.length)
+              setMeasurements((current) => {
+                let next = current;
+                for (const change of dimensions) {
+                  const size = change.dimensions;
+                  if (
+                    size &&
+                    (current[change.id]?.width !== size.width ||
+                      current[change.id]?.height !== size.height)
+                  ) {
+                    if (next === current) next = { ...current };
+                    next[change.id] = size;
+                  }
+                }
+                return next;
+              });
             const positions = changes.filter((c) => c.type === "position");
             if (positions.length)
               update((m) => ({

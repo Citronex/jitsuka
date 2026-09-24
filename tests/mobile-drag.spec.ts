@@ -18,6 +18,26 @@ test("newly named technique can be dragged with touch without losing the map", a
     "font-size",
     "16px",
   );
+  await page.evaluate(() => {
+    const hiddenNodes: string[] = [];
+    Object.assign(window, { hiddenNodes });
+    const observer = new MutationObserver((records) => {
+      for (const record of records) {
+        const element = record.target;
+        if (
+          element instanceof HTMLElement &&
+          element.matches(".react-flow__node") &&
+          element.style.visibility === "hidden"
+        )
+          hiddenNodes.push(element.dataset.id || "unknown");
+      }
+    });
+    observer.observe(document.querySelector(".react-flow__nodes")!, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["style"],
+    });
+  });
   const client = await context.newCDPSession(page);
   const x = bounds.x + bounds.width - 8,
     y = bounds.y + bounds.height / 2;
@@ -38,6 +58,9 @@ test("newly named technique can be dragged with touch without losing the map", a
   await expect(node).toBeVisible();
   await expect(page.locator(".react-flow__node")).toHaveCount(6);
   expect(errors).toEqual([]);
+  expect(await page.evaluate(() => Reflect.get(window, "hiddenNodes"))).toEqual(
+    [],
+  );
   const end = (await node.boundingBox())!;
   expect(end.y).toBeGreaterThan(bounds.y + 40);
   const saved = await page.evaluate(() =>
