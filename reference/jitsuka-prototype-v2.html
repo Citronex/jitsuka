@@ -1,0 +1,771 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Jitsuka — Jiu-Jitsu Game Map v2</title>
+  <style>
+    :root {
+      --bg: #f5f5f3;
+      --panel: rgba(255,255,255,.94);
+      --ink: #16181d;
+      --muted: #6f7480;
+      --border: #dedfdc;
+      --grid: rgba(24, 27, 32, .075);
+      --accent: #111318;
+      --shadow: 0 18px 50px rgba(18, 22, 28, .12);
+      --blue: #dcecff;
+      --green: #dcf6e8;
+      --amber: #fff0bf;
+      --purple: #eee1ff;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; overflow: hidden; }
+    body {
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+      touch-action: none;
+    }
+
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+
+    .app { height: 100%; display: grid; grid-template-rows: 64px 1fr; }
+    .topbar {
+      position: relative;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(250,250,248,.88);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: -.03em; }
+    .brand-mark {
+      width: 34px; height: 34px; border-radius: 10px;
+      background: var(--accent); color: #fff;
+      display: grid; place-items: center; font-weight: 900;
+      box-shadow: 0 5px 14px rgba(17,19,24,.18);
+    }
+    .brand small { display: block; color: var(--muted); font-weight: 600; font-size: 11px; letter-spacing: 0; margin-top: 1px; }
+
+    .top-actions { display: flex; gap: 8px; align-items: center; }
+    .btn {
+      border: 1px solid var(--border); background: #fff;
+      height: 38px; padding: 0 13px; border-radius: 11px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      cursor: pointer; transition: .16s ease; font-weight: 700; font-size: 13px;
+    }
+    .btn:hover { transform: translateY(-1px); border-color: #c8cac5; }
+    .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn.icon { width: 38px; padding: 0; }
+
+    .workspace { position: relative; min-height: 0; }
+    .canvas-shell {
+      position: absolute; inset: 0;
+      overflow: hidden;
+      cursor: grab;
+      background-color: var(--bg);
+      background-image:
+        linear-gradient(to right, var(--grid) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+    .canvas-shell.dragging-canvas { cursor: grabbing; }
+    .world {
+      position: absolute; left: 0; top: 0;
+      width: 3000px; height: 2200px;
+      transform-origin: 0 0;
+    }
+
+    .edges { position: absolute; inset: 0; width: 3000px; height: 2200px; overflow: visible; pointer-events: none; }
+    .edge-group { pointer-events: none; }
+    .edge { stroke: #373b44; stroke-width: 3; fill: none; opacity: .82; pointer-events: none; }
+    .edge.arrow { marker-end: url(#arrowHead); }
+    .edge-hit { stroke: transparent; stroke-width: 22; fill: none; pointer-events: stroke; cursor: pointer; }
+    .edge-label-hit { fill: transparent; pointer-events: all; cursor: pointer; }
+    .edge-label-bg { fill: rgba(245,245,243,.96); stroke: rgba(55,59,68,.22); stroke-width: 1; rx: 8; ry: 8; pointer-events: none; }
+    .edge-label { fill: #292d35; font-size: 13px; font-weight: 800; text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
+    .edge-group.selected .edge { stroke: #111318; stroke-width: 4; opacity: 1; }
+    .edge-group.selected .edge-label-bg { stroke: #111318; stroke-width: 1.5; }
+    .edge.pending { stroke-dasharray: 8 8; opacity: .5; }
+
+    .node {
+      position: absolute;
+      width: 180px; min-height: 78px;
+      display: flex; align-items: center; justify-content: center;
+      text-align: center; padding: 16px 18px;
+      border: 2px solid rgba(15,18,24,.72);
+      background: var(--blue);
+      box-shadow: 0 10px 22px rgba(19, 23, 30, .10);
+      font-weight: 800; font-size: 14px; line-height: 1.25;
+      cursor: grab; user-select: none;
+      transition: box-shadow .12s ease, transform .12s ease, border-color .12s ease;
+    }
+    .node:hover { box-shadow: 0 14px 28px rgba(19,23,30,.15); }
+    .node.dragging { cursor: grabbing; transition: none; box-shadow: 0 20px 36px rgba(19,23,30,.18); }
+    .node.selected { outline: 4px solid rgba(17, 19, 24, .12); border-color: #111318; }
+    .node.linked::after {
+      content: '↗'; position: absolute; right: 8px; top: 6px;
+      font-size: 12px; opacity: .65;
+    }
+    .shape-rounded { border-radius: 18px; }
+    .shape-pill { border-radius: 999px; }
+    .shape-circle { width: 112px; height: 112px; min-height: 112px; border-radius: 50%; padding: 13px; }
+    .shape-diamond {
+      width: 124px; height: 124px; min-height: 124px; padding: 0;
+      transform: rotate(45deg);
+      border-radius: 18px;
+    }
+    .shape-diamond .node-label { transform: rotate(-45deg); width: 94px; }
+    .shape-diamond.dragging { transform: rotate(45deg); }
+
+    .toolbar {
+      position: absolute; z-index: 20; left: 16px; top: 16px;
+      width: 224px; padding: 12px;
+      border: 1px solid var(--border); border-radius: 16px;
+      background: var(--panel); backdrop-filter: blur(18px); box-shadow: var(--shadow);
+    }
+    .tool-title { font-size: 11px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 5px 2px 8px; }
+    .tool-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+    .tool-row.two { grid-template-columns: repeat(2, 1fr); }
+    .tool {
+      height: 43px; border-radius: 11px; border: 1px solid var(--border); background: #fff;
+      display: grid; place-items: center; cursor: pointer; font-weight: 800; font-size: 12px;
+      transition: .14s ease;
+    }
+    .tool:hover, .tool.active { border-color: #9ea29b; box-shadow: 0 0 0 3px rgba(17,19,24,.06); }
+    .shape-preview { width: 25px; height: 18px; border: 2px solid #252932; background: #f0f0ed; }
+    .shape-preview.rounded { border-radius: 6px; }
+    .shape-preview.pill { border-radius: 99px; }
+    .shape-preview.circle { width: 21px; height: 21px; border-radius: 50%; }
+    .shape-preview.diamond { width: 18px; height: 18px; transform: rotate(45deg); border-radius: 3px; }
+    .swatch { width: 24px; height: 24px; border-radius: 8px; border: 1px solid rgba(0,0,0,.15); }
+    .connector-icon { font-size: 20px; line-height: 1; }
+    .hint { font-size: 11px; color: var(--muted); line-height: 1.4; margin: 9px 2px 2px; }
+    .divider { height: 1px; background: var(--border); margin: 11px 0; }
+
+    .inspector {
+      position: absolute; z-index: 20; right: 16px; top: 16px;
+      width: 288px; padding: 14px;
+      border: 1px solid var(--border); border-radius: 16px;
+      background: var(--panel); backdrop-filter: blur(18px); box-shadow: var(--shadow);
+      display: none;
+    }
+    .inspector.open { display: block; }
+    .inspector-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .inspector-head strong { font-size: 14px; }
+    .field { margin-bottom: 11px; }
+    .field label { display: block; font-size: 11px; color: var(--muted); font-weight: 800; margin-bottom: 6px; }
+    .input {
+      width: 100%; border: 1px solid var(--border); background: #fff; border-radius: 10px;
+      padding: 10px 11px; outline: none; font-size: 13px;
+    }
+    .input:focus { border-color: #8e938b; box-shadow: 0 0 0 3px rgba(17,19,24,.06); }
+    .danger { color: #9b2b2b; }
+
+    .zoom-controls {
+      position: absolute; z-index: 20; left: 16px; bottom: 16px;
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px; border: 1px solid var(--border); border-radius: 14px;
+      background: var(--panel); box-shadow: 0 12px 32px rgba(18,22,28,.10);
+    }
+    .zoom-label { min-width: 46px; text-align: center; font-size: 12px; font-weight: 800; color: var(--muted); }
+
+    .mode-chip {
+      position: absolute; z-index: 15; left: 50%; top: 16px; transform: translateX(-50%);
+      padding: 8px 12px; border-radius: 999px; background: rgba(17,19,24,.88); color:#fff;
+      font-size: 12px; font-weight: 800; box-shadow: 0 9px 24px rgba(0,0,0,.12); pointer-events: none;
+      opacity: 0; transition: .18s ease;
+    }
+    .presentation .mode-chip { opacity: 1; }
+    .presentation .toolbar, .presentation .inspector { display: none !important; }
+    .presentation .node { cursor: pointer; }
+
+    .empty {
+      position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+      text-align: center; pointer-events: none; color: var(--muted); z-index: 1;
+    }
+    .empty strong { display:block; color: var(--ink); margin-bottom: 4px; }
+
+    .toast {
+      position: fixed; z-index: 100; left: 50%; bottom: 24px; transform: translate(-50%, 20px);
+      background: #111318; color: #fff; border-radius: 12px; padding: 10px 13px;
+      font-size: 12px; font-weight: 700; opacity: 0; pointer-events: none; transition: .18s ease;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    @media (max-width: 760px) {
+      .topbar { padding: 0 10px; }
+      .brand small { display:none; }
+      .toolbar { width: 196px; left: 10px; top: 10px; }
+      .inspector { left: 10px; right: 10px; top: auto; bottom: 10px; width: auto; max-height: 48vh; overflow:auto; }
+      .zoom-controls { left:auto; right:10px; bottom:10px; }
+      .top-actions .btn span { display:none; }
+    }
+  </style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">J</div>
+      <div>jitsuka<small>build your jiu-jitsu game</small></div>
+    </div>
+    <div class="top-actions">
+      <button class="btn" id="fitBtn" title="Fit map">⌗ <span>Fit map</span></button>
+      <button class="btn primary" id="modeBtn">▶ <span>Presentation</span></button>
+    </div>
+  </header>
+
+  <main class="workspace" id="workspace">
+    <div class="canvas-shell" id="canvas">
+      <div class="world" id="world">
+        <svg class="edges" id="edges" viewBox="0 0 3000 2200" aria-hidden="true">
+          <defs>
+            <marker id="arrowHead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#373b44"></path>
+            </marker>
+          </defs>
+        </svg>
+        <div class="empty" id="empty"><strong>Your game starts here.</strong>Choose a shape to add a technique.</div>
+      </div>
+    </div>
+
+    <aside class="toolbar" id="toolbar">
+      <div class="tool-title">Add technique</div>
+      <div class="tool-row" id="shapeTools">
+        <button class="tool" data-shape="rounded" title="Rounded rectangle"><span class="shape-preview rounded"></span></button>
+        <button class="tool" data-shape="pill" title="Pill"><span class="shape-preview pill"></span></button>
+        <button class="tool" data-shape="diamond" title="Diamond"><span class="shape-preview diamond"></span></button>
+        <button class="tool" data-shape="circle" title="Circle"><span class="shape-preview circle"></span></button>
+      </div>
+
+      <div class="tool-title">Color</div>
+      <div class="tool-row" id="colorTools">
+        <button class="tool" data-color="#dcecff"><span class="swatch" style="background:#dcecff"></span></button>
+        <button class="tool" data-color="#dcf6e8"><span class="swatch" style="background:#dcf6e8"></span></button>
+        <button class="tool" data-color="#fff0bf"><span class="swatch" style="background:#fff0bf"></span></button>
+        <button class="tool" data-color="#eee1ff"><span class="swatch" style="background:#eee1ff"></span></button>
+      </div>
+
+      <div class="divider"></div>
+      <div class="tool-title">Connect techniques</div>
+      <div class="tool-row two" id="connectorTools">
+        <button class="tool" data-connector="line"><span class="connector-icon">—</span> Line</button>
+        <button class="tool" data-connector="arrow"><span class="connector-icon">→</span> Arrow</button>
+      </div>
+      <div class="hint">Pick a connector, then tap the first technique and the next technique. Give the connection a label such as “same-side arm connection” or “they post their hand.”</div>
+    </aside>
+
+    <aside class="inspector" id="inspector">
+      <div class="inspector-head"><strong>Edit technique</strong><button class="btn icon" id="closeInspector">×</button></div>
+      <div class="field">
+        <label>Technique / position</label>
+        <input class="input" id="labelInput" maxlength="80" placeholder="e.g. Knee cut pass" />
+      </div>
+      <div class="field">
+        <label>Video or reference link</label>
+        <input class="input" id="linkInput" type="url" placeholder="https://youtube.com/..." />
+      </div>
+      <div class="tool-title">Shape</div>
+      <div class="tool-row" id="inspectorShapes">
+        <button class="tool" data-shape="rounded"><span class="shape-preview rounded"></span></button>
+        <button class="tool" data-shape="pill"><span class="shape-preview pill"></span></button>
+        <button class="tool" data-shape="diamond"><span class="shape-preview diamond"></span></button>
+        <button class="tool" data-shape="circle"><span class="shape-preview circle"></span></button>
+      </div>
+      <div class="tool-title">Color</div>
+      <div class="tool-row" id="inspectorColors">
+        <button class="tool" data-color="#dcecff"><span class="swatch" style="background:#dcecff"></span></button>
+        <button class="tool" data-color="#dcf6e8"><span class="swatch" style="background:#dcf6e8"></span></button>
+        <button class="tool" data-color="#fff0bf"><span class="swatch" style="background:#fff0bf"></span></button>
+        <button class="tool" data-color="#eee1ff"><span class="swatch" style="background:#eee1ff"></span></button>
+      </div>
+      <div class="divider"></div>
+      <button class="btn danger" id="deleteNode" style="width:100%">Delete technique</button>
+    </aside>
+
+    <aside class="inspector" id="edgeInspector">
+      <div class="inspector-head"><strong>Edit connection</strong><button class="btn icon" id="closeEdgeInspector">×</button></div>
+      <div class="field">
+        <label>Action / condition</label>
+        <input class="input" id="edgeLabelInput" maxlength="90" placeholder="e.g. Same-side arm connection" />
+      </div>
+      <div class="field">
+        <label>Connector</label>
+        <select class="input" id="edgeTypeInput">
+          <option value="arrow">Arrow →</option>
+          <option value="line">Line —</option>
+        </select>
+      </div>
+      <div class="hint">Use connection text for the thing that happens between techniques: grips, reactions, openings, or decisions.</div>
+      <div class="divider"></div>
+      <button class="btn danger" id="deleteEdge" style="width:100%">Delete connection</button>
+    </aside>
+
+    <div class="zoom-controls">
+      <button class="btn icon" id="zoomOut">−</button>
+      <div class="zoom-label" id="zoomLabel">100%</div>
+      <button class="btn icon" id="zoomIn">+</button>
+    </div>
+    <div class="mode-chip">Presentation mode · tap a linked technique to open it</div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const app = document.getElementById('app');
+  const canvas = document.getElementById('canvas');
+  const world = document.getElementById('world');
+  const edgesSvg = document.getElementById('edges');
+  const empty = document.getElementById('empty');
+  const inspector = document.getElementById('inspector');
+  const edgeInspector = document.getElementById('edgeInspector');
+  const edgeLabelInput = document.getElementById('edgeLabelInput');
+  const edgeTypeInput = document.getElementById('edgeTypeInput');
+  const labelInput = document.getElementById('labelInput');
+  const linkInput = document.getElementById('linkInput');
+  const zoomLabel = document.getElementById('zoomLabel');
+  const modeBtn = document.getElementById('modeBtn');
+  const toast = document.getElementById('toast');
+
+  let state = {
+    nodes: [],
+    edges: [],
+    selectedId: null,
+    selectedEdgeId: null,
+    selectedColor: '#dcecff',
+    connectorMode: null,
+    connectorStart: null,
+    mode: 'edit',
+    view: { x: 80, y: 70, scale: 1 }
+  };
+
+  let drag = null;
+  let pan = null;
+  const pointers = new Map();
+  let pinchStart = null;
+  let suppressClick = false;
+
+  const sample = [
+    { id:'n1', x:420, y:230, label:'Standing', shape:'pill', color:'#fff0bf', link:'' },
+    { id:'n2', x:420, y:390, label:'Single leg', shape:'rounded', color:'#dcecff', link:'https://www.youtube.com/results?search_query=bjj+single+leg+takedown' },
+    { id:'n3', x:420, y:570, label:'Top half guard', shape:'diamond', color:'#dcf6e8', link:'' },
+    { id:'n4', x:220, y:760, label:'Knee cut pass', shape:'rounded', color:'#eee1ff', link:'https://www.youtube.com/results?search_query=bjj+knee+cut+pass' },
+    { id:'n5', x:620, y:760, label:'Back step pass', shape:'rounded', color:'#eee1ff', link:'https://www.youtube.com/results?search_query=bjj+back+step+pass' },
+    { id:'n6', x:420, y:950, label:'Side control', shape:'pill', color:'#dcf6e8', link:'' },
+    { id:'n7', x:900, y:570, label:'Half guard', shape:'rounded', color:'#dcecff', link:'' },
+    { id:'n8', x:900, y:780, label:'John Wayne sweep', shape:'pill', color:'#dcf6e8', link:'https://www.youtube.com/results?search_query=bjj+john+wayne+sweep' },
+  ];
+  const sampleEdges = [
+    {id:'e1', from:'n1', to:'n2', type:'arrow'},
+    {id:'e2', from:'n2', to:'n3', type:'arrow'},
+    {id:'e3', from:'n3', to:'n4', type:'arrow'},
+    {id:'e4', from:'n3', to:'n5', type:'arrow'},
+    {id:'e5', from:'n4', to:'n6', type:'arrow'},
+    {id:'e6', from:'n5', to:'n6', type:'arrow', label:''},
+    {id:'e7', from:'n7', to:'n8', type:'arrow', label:'Same-side arm connection'},
+  ];
+  state.nodes = sample;
+  state.edges = sampleEdges;
+
+  const save = () => localStorage.setItem('jitsuka-demo-v2', JSON.stringify({nodes:state.nodes, edges:state.edges}));
+  try {
+    const saved = JSON.parse(localStorage.getItem('jitsuka-demo-v2'));
+    if (saved?.nodes?.length) { state.nodes = saved.nodes; state.edges = (saved.edges || []).map(e => ({...e, label:e.label || ''})); }
+  } catch (_) {}
+
+  function notify(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(notify.t);
+    notify.t = setTimeout(() => toast.classList.remove('show'), 1700);
+  }
+
+  function setView() {
+    world.style.transform = `translate(${state.view.x}px, ${state.view.y}px) scale(${state.view.scale})`;
+    zoomLabel.textContent = Math.round(state.view.scale * 100) + '%';
+  }
+
+  function getNode(id) { return state.nodes.find(n => n.id === id); }
+  function getEdge(id) { return state.edges.find(e => e.id === id); }
+  function getNodeEl(id) { return world.querySelector(`.node[data-id="${id}"]`); }
+
+  function nodeCenter(n) {
+    const el = getNodeEl(n.id);
+    const w = el ? el.offsetWidth : 180;
+    const h = el ? el.offsetHeight : 78;
+    return { x: n.x + w/2, y: n.y + h/2 };
+  }
+
+  function renderEdges() {
+    [...edgesSvg.querySelectorAll('.edge-group')].forEach(el => el.remove());
+    state.edges.forEach(e => {
+      const from = getNode(e.from), to = getNode(e.to);
+      if (!from || !to) return;
+      const a = nodeCenter(from), b = nodeCenter(to);
+      const dx = Math.abs(b.x - a.x);
+      const bend = Math.max(40, Math.min(140, dx * .42));
+      const d = `M ${a.x} ${a.y} C ${a.x} ${a.y + bend}, ${b.x} ${b.y - bend}, ${b.x} ${b.y}`;
+      const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      group.setAttribute('class', `edge-group${e.id === state.selectedEdgeId ? ' selected' : ''}`);
+      group.dataset.id = e.id;
+
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', d);
+      path.setAttribute('class', `edge ${e.type === 'arrow' ? 'arrow' : ''}`);
+      group.appendChild(path);
+
+      if (state.mode === 'edit') {
+        const hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        hit.setAttribute('d', d);
+        hit.setAttribute('class', 'edge-hit');
+        hit.dataset.edgeId = e.id;
+        group.appendChild(hit);
+      }
+
+      if (e.label) {
+        // Cubic Bezier at t=.5. Since the control points use a symmetric vertical bend,
+        // this is a stable midpoint even as the connected nodes move.
+        const t=.5, mt=1-t;
+        const c1={x:a.x,y:a.y+bend}, c2={x:b.x,y:b.y-bend};
+        const mx=mt**3*a.x + 3*mt**2*t*c1.x + 3*mt*t**2*c2.x + t**3*b.x;
+        const my=mt**3*a.y + 3*mt**2*t*c1.y + 3*mt*t**2*c2.y + t**3*b.y;
+        const width=Math.max(76, Math.min(230, e.label.length*7.1+24));
+        const bg=document.createElementNS('http://www.w3.org/2000/svg','rect');
+        bg.setAttribute('x', mx-width/2); bg.setAttribute('y', my-15); bg.setAttribute('width',width); bg.setAttribute('height',30);
+        bg.setAttribute('class','edge-label-bg');
+        group.appendChild(bg);
+        const text=document.createElementNS('http://www.w3.org/2000/svg','text');
+        text.setAttribute('x',mx); text.setAttribute('y',my+1); text.setAttribute('class','edge-label');
+        text.textContent=e.label;
+        group.appendChild(text);
+        if (state.mode === 'edit') {
+          const labelHit=document.createElementNS('http://www.w3.org/2000/svg','rect');
+          labelHit.setAttribute('x', mx-width/2); labelHit.setAttribute('y', my-18); labelHit.setAttribute('width',width); labelHit.setAttribute('height',36);
+          labelHit.setAttribute('class','edge-label-hit'); labelHit.dataset.edgeId=e.id;
+          group.appendChild(labelHit);
+        }
+      }
+      edgesSvg.appendChild(group);
+    });
+  }
+
+  function renderNodes() {
+    [...world.querySelectorAll('.node')].forEach(el => el.remove());
+    state.nodes.forEach(n => {
+      const el = document.createElement('div');
+      el.className = `node shape-${n.shape}${n.id === state.selectedId ? ' selected' : ''}${n.link ? ' linked' : ''}`;
+      el.dataset.id = n.id;
+      el.style.left = `${n.x}px`;
+      el.style.top = `${n.y}px`;
+      el.style.background = n.color;
+      el.innerHTML = `<span class="node-label"></span>`;
+      el.querySelector('.node-label').textContent = n.label || 'New technique';
+      world.appendChild(el);
+    });
+    empty.style.display = state.nodes.length ? 'none' : 'block';
+    requestAnimationFrame(renderEdges);
+  }
+
+  function renderInspector() {
+    const n = getNode(state.selectedId);
+    const e = getEdge(state.selectedEdgeId);
+    if (!n || state.mode !== 'edit') {
+      inspector.classList.remove('open');
+    } else {
+      inspector.classList.add('open');
+      labelInput.value = n.label || '';
+      linkInput.value = n.link || '';
+      document.querySelectorAll('#inspectorShapes .tool').forEach(b => b.classList.toggle('active', b.dataset.shape === n.shape));
+      document.querySelectorAll('#inspectorColors .tool').forEach(b => b.classList.toggle('active', b.dataset.color === n.color));
+    }
+    if (!e || state.mode !== 'edit') {
+      edgeInspector.classList.remove('open');
+    } else {
+      edgeInspector.classList.add('open');
+      edgeLabelInput.value = e.label || '';
+      edgeTypeInput.value = e.type || 'arrow';
+    }
+  }
+
+  function render() { renderNodes(); renderInspector(); setView(); }
+
+  function addNode(shape='rounded') {
+    const rect = canvas.getBoundingClientRect();
+    const cx = (rect.width/2 - state.view.x) / state.view.scale;
+    const cy = (rect.height/2 - state.view.y) / state.view.scale;
+    const id = 'n' + Date.now().toString(36);
+    const n = { id, x: cx - 90 + Math.random()*30, y: cy - 40 + Math.random()*30, label:'New technique', shape, color:state.selectedColor, link:'' };
+    state.nodes.push(n);
+    state.selectedEdgeId = null;
+    state.selectedId = id;
+    save(); render();
+    setTimeout(() => { labelInput.focus(); labelInput.select(); }, 0);
+  }
+
+  function selectNode(id) {
+    state.selectedEdgeId = null;
+    if (state.mode === 'presentation') {
+      const n = getNode(id);
+      if (n?.link) window.open(n.link, '_blank', 'noopener,noreferrer');
+      else notify('No link added to this technique yet.');
+      return;
+    }
+
+    if (state.connectorMode) {
+      if (!state.connectorStart) {
+        state.connectorStart = id;
+        state.selectedId = id;
+        notify('Now choose the next technique');
+        render();
+        return;
+      }
+      if (state.connectorStart === id) {
+        state.connectorStart = null;
+        notify('Connector start cleared');
+        render();
+        return;
+      }
+      const exists = state.edges.some(e => e.from === state.connectorStart && e.to === id);
+      if (!exists) {
+        const newEdge = { id:'e'+Date.now().toString(36), from:state.connectorStart, to:id, type:state.connectorMode, label:'' };
+        state.edges.push(newEdge);
+        state.selectedEdgeId = newEdge.id;
+      }
+      state.connectorStart = null;
+      state.selectedId = null;
+      save(); render();
+      if (state.selectedEdgeId) setTimeout(() => edgeLabelInput.focus(), 0);
+      notify('Connected. Add the action or condition on the arrow.');
+      return;
+    }
+
+    state.selectedId = id;
+    render();
+  }
+
+  function pointerToWorld(clientX, clientY) {
+    const r = canvas.getBoundingClientRect();
+    return {
+      x: (clientX - r.left - state.view.x) / state.view.scale,
+      y: (clientY - r.top - state.view.y) / state.view.scale
+    };
+  }
+
+  canvas.addEventListener('pointerdown', (e) => {
+    canvas.setPointerCapture?.(e.pointerId);
+    pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    const nodeEl = e.target.closest('.node');
+
+    if (pointers.size === 2) {
+      const pts = [...pointers.values()];
+      pinchStart = {
+        dist: Math.hypot(pts[1].x-pts[0].x, pts[1].y-pts[0].y),
+        scale: state.view.scale,
+        x: state.view.x,
+        y: state.view.y,
+        mid: {x:(pts[0].x+pts[1].x)/2, y:(pts[0].y+pts[1].y)/2}
+      };
+      drag = pan = null;
+      return;
+    }
+
+    if (nodeEl && state.mode === 'edit' && !state.connectorMode) {
+      const id = nodeEl.dataset.id;
+      state.selectedEdgeId = null;
+      const n = getNode(id);
+      const p = pointerToWorld(e.clientX, e.clientY);
+      drag = { id, dx:p.x-n.x, dy:p.y-n.y, startX:e.clientX, startY:e.clientY };
+      nodeEl.classList.add('dragging');
+      state.selectedId = id;
+      renderInspector();
+      e.stopPropagation();
+    } else if (e.target.dataset?.edgeId && state.mode === 'edit') {
+      pan = null;
+    } else if (!nodeEl) {
+      pan = { startX:e.clientX, startY:e.clientY, x:state.view.x, y:state.view.y };
+      canvas.classList.add('dragging-canvas');
+      if (state.mode === 'edit' && !state.connectorMode) { state.selectedId = null; state.selectedEdgeId = null; renderInspector(); renderNodes(); }
+    }
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    if (pointers.has(e.pointerId)) pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+
+    if (pointers.size === 2 && pinchStart) {
+      const pts = [...pointers.values()];
+      const dist = Math.hypot(pts[1].x-pts[0].x, pts[1].y-pts[0].y);
+      const newScale = Math.min(2.4, Math.max(.35, pinchStart.scale * (dist / pinchStart.dist)));
+      const mid = {x:(pts[0].x+pts[1].x)/2, y:(pts[0].y+pts[1].y)/2};
+      const r = canvas.getBoundingClientRect();
+      const worldX = (pinchStart.mid.x - r.left - pinchStart.x) / pinchStart.scale;
+      const worldY = (pinchStart.mid.y - r.top - pinchStart.y) / pinchStart.scale;
+      state.view.scale = newScale;
+      state.view.x = mid.x - r.left - worldX * newScale;
+      state.view.y = mid.y - r.top - worldY * newScale;
+      setView();
+      suppressClick = true;
+      return;
+    }
+
+    if (drag) {
+      const p = pointerToWorld(e.clientX, e.clientY);
+      const n = getNode(drag.id);
+      if (!n) return;
+      n.x = Math.max(0, Math.min(2820, p.x - drag.dx));
+      n.y = Math.max(0, Math.min(2080, p.y - drag.dy));
+      const el = getNodeEl(n.id);
+      if (el) { el.style.left = n.x+'px'; el.style.top = n.y+'px'; }
+      renderEdges();
+      if (Math.hypot(e.clientX-drag.startX, e.clientY-drag.startY) > 4) suppressClick = true;
+    } else if (pan) {
+      state.view.x = pan.x + (e.clientX - pan.startX);
+      state.view.y = pan.y + (e.clientY - pan.startY);
+      setView();
+      if (Math.hypot(e.clientX-pan.startX, e.clientY-pan.startY) > 4) suppressClick = true;
+    }
+  });
+
+  canvas.addEventListener('pointerup', (e) => {
+    pointers.delete(e.pointerId);
+    if (pointers.size < 2) pinchStart = null;
+    if (drag) {
+      getNodeEl(drag.id)?.classList.remove('dragging');
+      save();
+    }
+    drag = null;
+    pan = null;
+    canvas.classList.remove('dragging-canvas');
+    setTimeout(() => suppressClick = false, 0);
+  });
+
+  canvas.addEventListener('pointercancel', (e) => {
+    pointers.delete(e.pointerId); drag = pan = pinchStart = null; canvas.classList.remove('dragging-canvas');
+  });
+
+  canvas.addEventListener('click', (e) => {
+    if (suppressClick) return;
+    const edgeId = e.target.dataset?.edgeId;
+    if (edgeId && state.mode === 'edit') {
+      state.selectedId = null;
+      state.selectedEdgeId = edgeId;
+      render();
+      return;
+    }
+    const nodeEl = e.target.closest('.node');
+    if (nodeEl) selectNode(nodeEl.dataset.id);
+  });
+
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const r = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - r.left, mouseY = e.clientY - r.top;
+    const beforeX = (mouseX - state.view.x) / state.view.scale;
+    const beforeY = (mouseY - state.view.y) / state.view.scale;
+    const factor = Math.exp(-e.deltaY * .0012);
+    state.view.scale = Math.min(2.4, Math.max(.35, state.view.scale * factor));
+    state.view.x = mouseX - beforeX * state.view.scale;
+    state.view.y = mouseY - beforeY * state.view.scale;
+    setView();
+  }, {passive:false});
+
+  document.getElementById('shapeTools').addEventListener('click', e => {
+    const b = e.target.closest('[data-shape]'); if (b) addNode(b.dataset.shape);
+  });
+  document.getElementById('colorTools').addEventListener('click', e => {
+    const b = e.target.closest('[data-color]'); if (!b) return;
+    state.selectedColor = b.dataset.color;
+    [...e.currentTarget.querySelectorAll('.tool')].forEach(x => x.classList.toggle('active', x===b));
+  });
+  document.getElementById('connectorTools').addEventListener('click', e => {
+    const b = e.target.closest('[data-connector]'); if (!b) return;
+    const next = b.dataset.connector;
+    state.connectorMode = state.connectorMode === next ? null : next;
+    state.connectorStart = null;
+    state.selectedId = null;
+    state.selectedEdgeId = null;
+    [...e.currentTarget.querySelectorAll('.tool')].forEach(x => x.classList.toggle('active', x.dataset.connector === state.connectorMode));
+    notify(state.connectorMode ? `Connect mode: ${state.connectorMode}` : 'Connector cancelled');
+  });
+
+  labelInput.addEventListener('input', () => {
+    const n = getNode(state.selectedId); if (!n) return;
+    n.label = labelInput.value; save(); renderNodes();
+  });
+  linkInput.addEventListener('input', () => {
+    const n = getNode(state.selectedId); if (!n) return;
+    n.link = linkInput.value.trim(); save(); renderNodes();
+  });
+
+  document.getElementById('inspectorShapes').addEventListener('click', e => {
+    const b = e.target.closest('[data-shape]'); const n=getNode(state.selectedId); if(!b||!n)return;
+    n.shape=b.dataset.shape; save(); render();
+  });
+  document.getElementById('inspectorColors').addEventListener('click', e => {
+    const b = e.target.closest('[data-color]'); const n=getNode(state.selectedId); if(!b||!n)return;
+    n.color=b.dataset.color; save(); render();
+  });
+  document.getElementById('closeInspector').addEventListener('click', () => { state.selectedId=null; render(); });
+  document.getElementById('closeEdgeInspector').addEventListener('click', () => { state.selectedEdgeId=null; render(); });
+  edgeLabelInput.addEventListener('input', () => {
+    const e=getEdge(state.selectedEdgeId); if(!e)return;
+    e.label=edgeLabelInput.value; save(); renderEdges();
+  });
+  edgeTypeInput.addEventListener('change', () => {
+    const e=getEdge(state.selectedEdgeId); if(!e)return;
+    e.type=edgeTypeInput.value; save(); renderEdges();
+  });
+  document.getElementById('deleteEdge').addEventListener('click', () => {
+    const id=state.selectedEdgeId; if(!id)return;
+    state.edges=state.edges.filter(e=>e.id!==id); state.selectedEdgeId=null; save(); render();
+  });
+  document.getElementById('deleteNode').addEventListener('click', () => {
+    const id=state.selectedId; if(!id)return;
+    state.nodes=state.nodes.filter(n=>n.id!==id); state.edges=state.edges.filter(e=>e.from!==id&&e.to!==id); state.selectedId=null; save(); render();
+  });
+
+  function zoomAtCenter(factor) {
+    const r=canvas.getBoundingClientRect();
+    const mx=r.width/2, my=r.height/2;
+    const wx=(mx-state.view.x)/state.view.scale, wy=(my-state.view.y)/state.view.scale;
+    state.view.scale=Math.min(2.4,Math.max(.35,state.view.scale*factor));
+    state.view.x=mx-wx*state.view.scale; state.view.y=my-wy*state.view.scale; setView();
+  }
+  document.getElementById('zoomIn').addEventListener('click',()=>zoomAtCenter(1.18));
+  document.getElementById('zoomOut').addEventListener('click',()=>zoomAtCenter(.85));
+
+  document.getElementById('fitBtn').addEventListener('click', () => {
+    if(!state.nodes.length){state.view={x:80,y:70,scale:1};setView();return;}
+    const xs=state.nodes.map(n=>n.x), ys=state.nodes.map(n=>n.y);
+    const minX=Math.min(...xs)-120, minY=Math.min(...ys)-120, maxX=Math.max(...xs)+300, maxY=Math.max(...ys)+260;
+    const r=canvas.getBoundingClientRect();
+    const scale=Math.min(1.25, Math.max(.35, Math.min(r.width/(maxX-minX), r.height/(maxY-minY))*.88));
+    state.view.scale=scale; state.view.x=(r.width-(maxX-minX)*scale)/2-minX*scale; state.view.y=(r.height-(maxY-minY)*scale)/2-minY*scale; setView();
+  });
+
+  modeBtn.addEventListener('click', () => {
+    state.mode = state.mode === 'edit' ? 'presentation' : 'edit';
+    state.connectorMode = null; state.connectorStart = null; state.selectedId = null; state.selectedEdgeId = null;
+    app.classList.toggle('presentation', state.mode === 'presentation');
+    modeBtn.classList.toggle('primary', state.mode === 'edit');
+    modeBtn.innerHTML = state.mode === 'edit' ? '▶ <span>Presentation</span>' : '✎ <span>Edit</span>';
+    render();
+  });
+
+  // Prevent native browser gestures from fighting the canvas.
+  ['gesturestart','gesturechange','gestureend'].forEach(evt => document.addEventListener(evt, e => e.preventDefault(), {passive:false}));
+
+  render();
+})();
+</script>
+</body>
+</html>
