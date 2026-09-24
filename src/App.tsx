@@ -49,6 +49,7 @@ export function App() {
     type: "node" | "edge";
     id: string;
   } | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
   const [addingId, setAddingId] = useState<string | null>(null);
   const [color, setColor] = useState<Technique["color"]>("blue");
   const [connector, setConnector] = useState<Connection["kind"] | null>(null);
@@ -130,11 +131,13 @@ export function App() {
         });
       else setStart(start === id ? null : id);
     } else {
+      setAddOpen(false);
       setSelected({ type: "node", id });
     }
   }
   function finishTechnique() {
     setAddingId(null);
+    setAddOpen(false);
     setSelected(null);
     titleRef.current?.blur();
   }
@@ -271,7 +274,11 @@ export function App() {
       <main>
         <EditLauncher
           hidden={!presentation}
-          onEdit={() => setPresentation(false)}
+          onEdit={() => {
+            setPresentation(false);
+            setAddOpen(false);
+            setSelected(null);
+          }}
         />
         <ReactFlow
           nodes={nodes}
@@ -337,7 +344,12 @@ export function App() {
               setStart(null);
             }
           }}
-          onPaneClick={() => setSelected(null)}
+          onPaneClick={() => {
+            if (!presentation) {
+              setSelected(null);
+              setAddOpen(true);
+            }
+          }}
         >
           <Background
             variant={BackgroundVariant.Lines}
@@ -349,18 +361,29 @@ export function App() {
         <div className="editor-dock">
           {!presentation && (
             <aside className="toolbar panel">
-              {node || edge ? (
+              {!addOpen || node || edge ? (
                 <button
                   className="expand-tools"
                   aria-expanded={false}
-                  onClick={() => setSelected(null)}
+                  onClick={() => {
+                    setSelected(null);
+                    setAddOpen(true);
+                  }}
                 >
                   Add a technique <span aria-hidden="true">＋</span>
                 </button>
               ) : (
                 <>
                   <div className="eyebrow">YOUR NEXT MOVE</div>
-                  <h2>Add a technique</h2>
+                  <div className="inspector-heading">
+                    <h2>Add a technique</h2>
+                    <button
+                      aria-label="Minimize add technique"
+                      onClick={() => setAddOpen(false)}
+                    >
+                      −
+                    </button>
+                  </div>
                   <ShapeChoices onChange={addTechnique} />
                   <p className="field-caption">Choose a color</p>
                   <ColorChoices value={color} onChange={setColor} />
@@ -392,6 +415,19 @@ export function App() {
               )}
             </aside>
           )}
+          {!presentation && !node && !edge && (
+            <aside
+              className="panel collapsed-editor"
+              aria-label="Edit a technique collapsed"
+            >
+              <div
+                className="expand-tools"
+                title="Select a technique on the map to edit it"
+              >
+                Edit a technique <span aria-hidden="true">＋</span>
+              </div>
+            </aside>
+          )}
           {!presentation && (node || edge) && (
             <aside
               className="inspector panel"
@@ -413,7 +449,10 @@ export function App() {
                 </h2>
                 <button
                   aria-label="Close editor"
-                  onClick={() => setSelected(null)}
+                  onClick={() => {
+                    setSelected(null);
+                    setAddOpen(false);
+                  }}
                 >
                   ×
                 </button>

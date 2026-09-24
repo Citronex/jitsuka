@@ -735,3 +735,8 @@ textarea {
   gap: 8px;
   background: #fffefa;
 }
+.collapsed-editor .expand-tools {
+  min-height: 40px;
+  font-size: 13px;
+  font-weight: 600;
+}

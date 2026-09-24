@@ -5,6 +5,9 @@ test("WebKit keeps every technique visible on each drag frame", async ({
 }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Edit map" }).tap();
+  await page
+    .getByRole("button", { name: "Add a technique", exact: true })
+    .click();
   await page.getByRole("button", { name: "rounded shape", exact: true }).tap();
   await page.getByLabel("Technique / position").fill("Safari drag");
   const node = page

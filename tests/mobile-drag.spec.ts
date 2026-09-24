@@ -8,6 +8,9 @@ test("newly named technique can be dragged with touch without losing the map", a
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
   await page.getByRole("button", { name: "Edit map" }).tap();
+  await page
+    .getByRole("button", { name: "Add a technique", exact: true })
+    .click();
   await page.getByRole("button", { name: "rounded shape", exact: true }).tap();
   await page.getByLabel("Technique / position").fill("Mobile drag");
   const node = page
@@ -83,6 +86,9 @@ test("interrupted edge drag stops moving the canvas after fingers lift", async (
 }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Edit map" }).tap();
+  await page
+    .getByRole("button", { name: "Add a technique", exact: true })
+    .click();
   await page.getByRole("button", { name: "rounded shape", exact: true }).tap();
   await page.getByLabel("Technique / position").fill("Interrupted drag");
   await page.getByRole("button", { name: "Close editor" }).tap();

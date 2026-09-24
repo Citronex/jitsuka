@@ -4,6 +4,9 @@ test("create, label, persist and delete a connected technique", async ({
 }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Edit map" }).click();
+  await page
+    .getByRole("button", { name: "Add a technique", exact: true })
+    .click();
   await expect(
     page.getByText("Same-side arm connection", { exact: true }),
   ).toBeVisible();
@@ -15,6 +18,9 @@ test("create, label, persist and delete a connected technique", async ({
     .getByLabel("Video or reference link")
     .fill("https://www.youtube.com/watch?v=example");
   await page.getByRole("button", { name: "Close editor" }).click();
+  await page
+    .getByRole("button", { name: "Add a technique", exact: true })
+    .click();
   await page.getByRole("button", { name: "→ Arrow", exact: true }).click();
   await page
     .locator(".react-flow__node")
@@ -43,6 +49,9 @@ test("create, label, persist and delete a connected technique", async ({
   expect(popup.url()).toContain("youtube.com");
   await popup.close();
   await page.getByRole("button", { name: "Edit map" }).click();
+  await page
+    .getByRole("button", { name: "Add a technique", exact: true })
+    .click();
   await page.evaluate(() => {
     window.open = () => {
       throw new Error("Edit mode must not open links");
@@ -67,6 +76,9 @@ test("phone layout supports adding and editing", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await page.getByRole("button", { name: "Edit map" }).click();
+  await page
+    .getByRole("button", { name: "Add a technique", exact: true })
+    .click();
   await page.getByRole("button", { name: "circle shape" }).click();
   await page.getByLabel("Technique / position").fill("Side Control");
   await expect(
@@ -94,6 +106,9 @@ test("view mode launcher drags without editing and opens editor on click", async
   const after = (await launcher.boundingBox())!;
   expect(after.x).toBeGreaterThan(before.x + 150);
   await launcher.click();
+  await page
+    .getByRole("button", { name: "Add a technique", exact: true })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Add a technique" }),
   ).toBeVisible();
@@ -102,6 +117,9 @@ test("view mode launcher drags without editing and opens editor on click", async
   expect((await launcher.boundingBox())!.x).toBe(after.x);
   await launcher.focus();
   await page.keyboard.press("Enter");
+  await page
+    .getByRole("button", { name: "Add a technique", exact: true })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Add a technique" }),
   ).toBeVisible();
@@ -112,6 +130,9 @@ test("connection labels preserve Enter line breaks on the map and after reload",
 }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Edit map" }).click();
+  await page
+    .getByRole("button", { name: "Add a technique", exact: true })
+    .click();
   await page
     .locator('.react-flow__edge[data-id="e1"] .react-flow__edge-textbg')
     .click();
@@ -138,6 +159,9 @@ test("unlinked nodes are silent and editing panels stack with one color picker",
   await halfGuard.click();
   await expect(page.getByRole("status")).toHaveCount(0);
   await page.getByRole("button", { name: "Edit map" }).click();
+  await page
+    .getByRole("button", { name: "Add a technique", exact: true })
+    .click();
   await halfGuard.click();
   const toolbar = page.locator(".toolbar");
   const inspector = page.getByRole("complementary", {
@@ -154,7 +178,7 @@ test("unlinked nodes are silent and editing panels stack with one color picker",
   expect(bottom.y).toBeGreaterThan(top.y + top.height);
   await page.getByRole("button", { name: "Close editor" }).click();
   await expect(
-    toolbar.getByRole("button", { name: "blue color" }),
+    toolbar.getByRole("button", { name: "Add a technique", exact: true }),
   ).toBeVisible();
 });
 
@@ -163,6 +187,9 @@ test("Add and Update finish a technique without leaving Edit mode or duplicating
 }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Edit map" }).click();
+  await page
+    .getByRole("button", { name: "Add a technique", exact: true })
+    .click();
   await page
     .getByRole("button", { name: "rounded shape", exact: true })
     .click();
@@ -192,4 +219,20 @@ test("Add and Update finish a technique without leaving Edit mode or duplicating
   await expect(
     page.getByText("Butterfly Sweep", { exact: true }),
   ).toBeVisible();
+});
+
+test('edit mode starts minimized and opens the panel for the canvas target', async ({page}) => {
+  await page.goto('/');
+  await page.getByRole('button',{name:'Edit map'}).click();
+  await expect(page.getByRole('button',{name:'Add a technique',exact:true})).toHaveAttribute('aria-expanded','false');
+  await expect(page.getByRole('complementary',{name:'Edit a technique collapsed'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'rounded shape'})).toHaveCount(0);
+  await page.locator('.react-flow__pane').click({position:{x:1100,y:40}});
+  await expect(page.locator('.toolbar').getByRole('button',{name:'rounded shape'})).toBeVisible();
+  await page.locator('.react-flow__node[data-id="half"]').click();
+  await expect(page.getByLabel('Technique / position')).toHaveValue('Half Guard');
+  await expect(page.locator('.toolbar').getByRole('button',{name:'rounded shape'})).toHaveCount(0);
+  await page.locator('.react-flow__pane').click({position:{x:1100,y:40}});
+  await expect(page.getByLabel('Technique / position')).toHaveCount(0);
+  await expect(page.locator('.toolbar').getByRole('button',{name:'rounded shape'})).toBeVisible();
 });
