@@ -410,8 +410,7 @@ select:focus {
 .map-caption span {
   padding: 0 8px;
 }
-.mode-tip,
-.study-tip {
+.mode-tip {
   position: absolute;
   left: 50%;
   top: 18px;
@@ -428,17 +427,8 @@ select:focus {
   min-height: 28px;
   padding: 5px 8px;
 }
-.study-tip {
-  font-size: 9px;
-  letter-spacing: 1px;
-}
-.study-tip span {
-  display: block;
-  font-size: 12px;
-  letter-spacing: 0;
-  margin-top: 6px;
-  color: #e1e8d7;
-}
+
+
 .empty {
   position: absolute;
   top: 45%;
@@ -566,11 +556,7 @@ select:focus {
   .inspector hr {
     margin: 12px 0;
   }
-  .study-tip {
-    width: max-content;
-    max-width: 90%;
-    text-align: center;
-  }
+
   .map-caption {
     bottom: 28px;
     font-size: 10px;

@@ -516,11 +516,6 @@ export function App() {
             </button>
           </div>
         )}
-        {presentation && (
-          <div className="study-tip">
-            VIEW MODE <span>Tap a linked technique to open its video ↗</span>
-          </div>
-        )}
         {!map.nodes.length && (
           <div className="empty">
             <h2>Your game starts here.</h2>
