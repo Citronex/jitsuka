@@ -44,10 +44,12 @@ test("create, label, persist and delete a connected technique", async ({
   await popup.close();
   await page.getByRole("button", { name: "Edit map" }).click();
   await page.evaluate(() => {
-    window.open = () => { throw new Error("Edit mode must not open links"); };
+    window.open = () => {
+      throw new Error("Edit mode must not open links");
+    };
   });
   const errors: string[] = [];
-  page.on("pageerror", error => errors.push(error.message));
+  page.on("pageerror", (error) => errors.push(error.message));
   await page
     .locator(".react-flow__node")
     .filter({ hasText: "Knee Cut" })
@@ -110,7 +112,9 @@ test("connection labels preserve Enter line breaks on the map and after reload",
 }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Edit map" }).click();
-  await page.locator('.react-flow__edge[data-id="e1"] .react-flow__edge-textbg').click();
+  await page
+    .locator('.react-flow__edge[data-id="e1"] .react-flow__edge-textbg')
+    .click();
   const field = page.getByLabel("Action / condition");
   await field.fill("Opponent posts");
   await field.press("Enter");
@@ -126,21 +130,66 @@ test("connection labels preserve Enter line breaks on the map and after reload",
   await expect(lines).toHaveText(["Opponent posts", "same-side hand"]);
 });
 
-test('unlinked nodes are silent and editing panels stack with one color picker', async ({ page }) => {
-  await page.goto('/');
+test("unlinked nodes are silent and editing panels stack with one color picker", async ({
+  page,
+}) => {
+  await page.goto("/");
   const halfGuard = page.locator('.react-flow__node[data-id="half"]');
   await halfGuard.click();
-  await expect(page.getByRole('status')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Edit map' }).click();
+  await expect(page.getByRole("status")).toHaveCount(0);
+  await page.getByRole("button", { name: "Edit map" }).click();
   await halfGuard.click();
-  const toolbar = page.locator('.toolbar');
-  const inspector = page.getByRole('complementary', { name: 'Edit technique', exact: true });
-  await expect(toolbar.getByRole('button', { name: 'blue color' })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'blue color' })).toHaveCount(1);
+  const toolbar = page.locator(".toolbar");
+  const inspector = page.getByRole("complementary", {
+    name: "Edit technique",
+    exact: true,
+  });
+  await expect(toolbar.getByRole("button", { name: "blue color" })).toHaveCount(
+    0,
+  );
+  await expect(page.getByRole("button", { name: "blue color" })).toHaveCount(1);
   const top = (await toolbar.boundingBox())!;
   const bottom = (await inspector.boundingBox())!;
   expect(bottom.x).toBe(top.x);
   expect(bottom.y).toBeGreaterThan(top.y + top.height);
-  await page.getByRole('button', { name: 'Close editor' }).click();
-  await expect(toolbar.getByRole('button', { name: 'blue color' })).toBeVisible();
+  await page.getByRole("button", { name: "Close editor" }).click();
+  await expect(
+    toolbar.getByRole("button", { name: "blue color" }),
+  ).toBeVisible();
+});
+
+test("Add and Update finish a technique without leaving Edit mode or duplicating nodes", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Edit map" }).click();
+  await page
+    .getByRole("button", { name: "rounded shape", exact: true })
+    .click();
+  await page.getByLabel("Technique / position").fill("Butterfly Guard");
+  await page
+    .getByRole("button", { name: "Add technique", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Done editing" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Technique / position")).toHaveCount(0);
+  await expect(page.locator(".react-flow__node")).toHaveCount(6);
+  await page
+    .locator(".react-flow__node")
+    .filter({ hasText: "Butterfly Guard" })
+    .click();
+  await page.getByLabel("Technique / position").fill("Butterfly Sweep");
+  await page
+    .getByRole("button", { name: "Update technique", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Done editing" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Technique / position")).toHaveCount(0);
+  await expect(page.locator(".react-flow__node")).toHaveCount(6);
+  await page.reload();
+  await expect(
+    page.getByText("Butterfly Sweep", { exact: true }),
+  ).toBeVisible();
 });

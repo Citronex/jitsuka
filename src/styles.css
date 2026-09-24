@@ -590,7 +590,7 @@ select:focus {
   }
 }
 @media (max-width: 600px) {
-  .inspector .danger {
+  .inspector .inspector-actions {
     position: sticky;
     bottom: 0;
     box-shadow: 0 -7px 12px #fffefa;
@@ -742,4 +742,10 @@ textarea {
   .inspector select {
     font-size: 16px;
   }
+}
+
+.inspector-actions {
+  display: grid;
+  gap: 8px;
+  background: #fffefa;
 }

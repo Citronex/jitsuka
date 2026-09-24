@@ -49,6 +49,7 @@ export function App() {
     type: "node" | "edge";
     id: string;
   } | null>(null);
+  const [addingId, setAddingId] = useState<string | null>(null);
   const [color, setColor] = useState<Technique["color"]>("blue");
   const [connector, setConnector] = useState<Connection["kind"] | null>(null);
   const [start, setStart] = useState<string | null>(null);
@@ -132,6 +133,11 @@ export function App() {
       setSelected({ type: "node", id });
     }
   }
+  function finishTechnique() {
+    setAddingId(null);
+    setSelected(null);
+    titleRef.current?.blur();
+  }
   function addTechnique(shape: Technique["shape"]) {
     const bounds = document.querySelector("main")!.getBoundingClientRect();
     const position = flow.screenToFlowPosition({
@@ -149,6 +155,7 @@ export function App() {
     setConnector(null);
     setStart(null);
     setSelected({ type: "node", id });
+    setAddingId(id);
     requestAnimationFrame(() => {
       titleRef.current?.focus({ preventScroll: true });
       titleRef.current?.select();
@@ -388,10 +395,22 @@ export function App() {
           {!presentation && (node || edge) && (
             <aside
               className="inspector panel"
-              aria-label={node ? "Edit technique" : "Edit connection"}
+              aria-label={
+                node
+                  ? addingId === node.id
+                    ? "Add technique"
+                    : "Edit technique"
+                  : "Edit connection"
+              }
             >
               <div className="inspector-heading">
-                <h2>{node ? "Edit technique" : "Edit connection"}</h2>
+                <h2>
+                  {node
+                    ? addingId === node.id
+                      ? "Add technique"
+                      : "Edit technique"
+                    : "Edit connection"}
+                </h2>
                 <button
                   aria-label="Close editor"
                   onClick={() => setSelected(null)}
@@ -469,9 +488,18 @@ export function App() {
                 </>
               )}
               <hr />
-              <button className="danger" onClick={deleteSelected}>
-                Delete {node ? "technique" : "connection"}
-              </button>
+              <div className="inspector-actions">
+                {node && (
+                  <button className="primary" onClick={finishTechnique}>
+                    {addingId === node.id
+                      ? "Add technique"
+                      : "Update technique"}
+                  </button>
+                )}
+                <button className="danger" onClick={deleteSelected}>
+                  Delete {node ? "technique" : "connection"}
+                </button>
+              </div>
             </aside>
           )}
         </div>
