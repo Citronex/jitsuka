@@ -76,7 +76,8 @@ export function App() {
     }
   }, [map]);
   useEffect(() => {
-    if (selected?.type === "edge") edgeRef.current?.focus();
+    if (selected?.type === "edge")
+      edgeRef.current?.focus({ preventScroll: true });
   }, [selected]);
   function patchNode(patch: Partial<Technique>) {
     if (node)
@@ -146,7 +147,7 @@ export function App() {
     setStart(null);
     setSelected({ type: "node", id });
     requestAnimationFrame(() => {
-      titleRef.current?.focus();
+      titleRef.current?.focus({ preventScroll: true });
       titleRef.current?.select();
     });
   }
@@ -306,7 +307,6 @@ export function App() {
             }
           }}
           onPaneClick={() => setSelected(null)}
-          onNodeDragStart={() => setSelected(null)}
         >
           <Background
             variant={BackgroundVariant.Lines}
