@@ -4,6 +4,11 @@ import { VitePWA } from "vite-plugin-pwa";
 const base = process.env.VITE_BASE_PATH || "/";
 export default defineConfig({
   base,
+  define: {
+    "import.meta.env.VITE_APP_VERSION": JSON.stringify(
+      process.env.npm_package_version || "development",
+    ),
+  },
   plugins: [
     react(),
     VitePWA({

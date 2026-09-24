@@ -277,6 +277,7 @@ export function App() {
           elementsSelectable={!presentation}
           deleteKeyCode={null}
           zoomOnPinch
+          autoPanOnNodeDrag={false}
           onNodesChange={(changes) => {
             const positions = changes.filter((c) => c.type === "position");
             if (positions.length)

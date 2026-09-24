@@ -53,3 +53,55 @@ test("newly named technique can be dragged with touch without losing the map", a
   await expect(node).toBeVisible();
   await page.screenshot({ path: "test-results/mobile-drag.png" });
 });
+
+test("interrupted edge drag stops moving the canvas after fingers lift", async ({
+  page,
+  context,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Edit map" }).tap();
+  await page.getByRole("button", { name: "rounded shape", exact: true }).tap();
+  await page.getByLabel("Technique / position").fill("Interrupted drag");
+  await page.getByRole("button", { name: "Close editor" }).tap();
+  const node = page
+    .locator(".react-flow__node")
+    .filter({ hasText: "Interrupted drag" });
+  const box = (await node.boundingBox())!;
+  const client = await context.newCDPSession(page);
+  const x = box.x + box.width - 8;
+  const y = box.y + box.height / 2;
+  const bottom = page.viewportSize()!.height - 5;
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [{ x, y, id: 0 }],
+  });
+  for (let i = 1; i <= 15; i++)
+    await client.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{ x, y: y + ((bottom - y) * i) / 15, id: 0 }],
+    });
+  await page.waitForTimeout(150);
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [
+      { x, y: bottom, id: 0 },
+      { x: x - 35, y: bottom - 30, id: 1 },
+    ],
+  });
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchMove",
+    touchPoints: [
+      { x, y: bottom - 1, id: 0 },
+      { x: x - 35, y: bottom - 31, id: 1 },
+    ],
+  });
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchEnd",
+    touchPoints: [],
+  });
+  const viewport = page.locator(".react-flow__viewport");
+  await page.waitForTimeout(200);
+  const stopped = await viewport.getAttribute("style");
+  await page.waitForTimeout(600);
+  expect(await viewport.getAttribute("style")).toBe(stopped);
+});

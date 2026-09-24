@@ -32,6 +32,7 @@ export function AppTools({
       <summary>My map</summary>
       <div className="app-tools-panel panel">
         <h2>Take your game with you</h2>
+        <p>Version {import.meta.env.VITE_APP_VERSION}</p>
         <p>
           Maps are saved on this device. Export your map, send the file to your
           phone, then import it there.
