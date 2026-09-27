@@ -1,5 +1,6 @@
 import { MarkerType, type Node } from "@xyflow/react";
 import type { JitsukaDocument, JitsukaNode } from "../domain/schema";
+import { nearestHandles } from "./nearestHandles";
 export type TechniqueFlowNode = Node<
   JitsukaNode & { presentation: boolean; connecting: boolean },
   "technique"
@@ -26,13 +27,18 @@ export function documentToFlow(
     selected: !options.presentation && options.selectedId === node.id,
     ariaLabel: node.label,
   }));
+  const byId = new Map(document.nodes.map((node) => [node.id, node]));
   const edges = document.edges.map((edge) => ({
     id: edge.id,
     source: edge.source,
     target: edge.target,
     type: "default",
-    sourceHandle: edge.appearance?.sourceAnchor ?? "bottom",
-    targetHandle: edge.appearance?.targetAnchor ?? "top",
+    ...nearestHandles(
+      byId.get(edge.source)!,
+      byId.get(edge.target)!,
+      options.measurements[edge.source],
+      options.measurements[edge.target],
+    ),
     selected: !options.presentation && options.selectedId === edge.id,
     markerEnd:
       edge.appearance?.arrow === "end"

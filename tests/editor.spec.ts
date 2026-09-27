@@ -1,6 +1,65 @@
 import { expect, test } from "@playwright/test";
 import { seedLegacyMap } from "./seed";
+import { halfGuardFixture } from "../src/domain/fixture";
 test.beforeEach(async ({ page }) => seedLegacyMap(page));
+test("an upward connection leaves the source top and enters the target bottom", async ({
+  page,
+}) => {
+  const document = structuredClone(halfGuardFixture);
+  document.nodes[1].position.y = -250;
+  await page.addInitScript(
+    (doc) => localStorage.setItem("jitsuka:document:v1", JSON.stringify(doc)),
+    document,
+  );
+  await page.goto("/");
+  const source = page.locator('.react-flow__node[data-id="half"]');
+  const target = page.locator('.react-flow__node[data-id="sweep"]');
+  await expect(source).toBeVisible();
+  await expect(target).toBeVisible();
+  const path = page.locator(".react-flow__edge-path");
+  await expect(path).toHaveCount(1);
+  await expect
+    .poll(async () => {
+      const from = (await source.locator('[data-handleid="top"]').boundingBox())!;
+      const to = (await target.locator('[data-handleid="bottom"]').boundingBox())!;
+      const points = await path.evaluate((element: SVGPathElement) => {
+        const matrix = element.getScreenCTM()!;
+        const start = element.getPointAtLength(0).matrixTransform(matrix);
+        const end = element
+          .getPointAtLength(element.getTotalLength())
+          .matrixTransform(matrix);
+        return { start: start.y, end: end.y };
+      });
+      return Math.max(
+        Math.abs(points.start - from.y),
+        Math.abs(points.end - (to.y + to.height)),
+      );
+    })
+    .toBeLessThan(5);
+});
+test("the edit row opens a technique picker and Cancel is readable", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Edit map" }).click();
+  await page
+    .getByRole("button", { name: "Edit a technique", exact: true })
+    .click({ position: { x: 30, y: 20 } });
+  await page.getByLabel("Choose a technique to edit").selectOption("half");
+  await expect(page.getByLabel("Technique / position")).toHaveValue(
+    "Half Guard",
+  );
+  await page.getByRole("button", { name: "Close editor" }).click();
+  await page
+    .getByRole("button", { name: "Add a technique", exact: true })
+    .click();
+  await page.getByRole("button", { name: "→ Arrow", exact: true }).click();
+  const cancel = page.getByRole("button", { name: "Cancel", exact: true });
+  await expect(cancel).toHaveCSS("background-color", "rgb(24, 89, 163)");
+  await expect(cancel).toHaveCSS("color", "rgb(255, 255, 255)");
+  await cancel.click();
+  await expect(cancel).toHaveCount(0);
+});
 test("create, label, persist and delete a connected technique", async ({
   page,
 }) => {
@@ -223,18 +282,38 @@ test("Add and Update finish a technique without leaving Edit mode or duplicating
   ).toBeVisible();
 });
 
-test('edit mode starts minimized and opens the panel for the canvas target', async ({page}) => {
-  await page.goto('/');
-  await page.getByRole('button',{name:'Edit map'}).click();
-  await expect(page.getByRole('button',{name:'Add a technique',exact:true})).toHaveAttribute('aria-expanded','false');
-  await expect(page.getByRole('complementary',{name:'Edit a technique collapsed'})).toBeVisible();
-  await expect(page.getByRole('button',{name:'rounded shape'})).toHaveCount(0);
-  await page.locator('.react-flow__pane').click({position:{x:1100,y:40}});
-  await expect(page.locator('.toolbar').getByRole('button',{name:'rounded shape'})).toBeVisible();
+test("edit mode starts minimized and opens the panel for the canvas target", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Edit map" }).click();
+  await expect(
+    page.getByRole("button", { name: "Add a technique", exact: true }),
+  ).toHaveAttribute("aria-expanded", "false");
+  await expect(
+    page.getByRole("complementary", { name: "Edit a technique collapsed" }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "rounded shape" })).toHaveCount(
+    0,
+  );
+  await page
+    .locator(".react-flow__pane")
+    .click({ position: { x: 1100, y: 40 } });
+  await expect(
+    page.locator(".toolbar").getByRole("button", { name: "rounded shape" }),
+  ).toBeVisible();
   await page.locator('.react-flow__node[data-id="half"]').click();
-  await expect(page.getByLabel('Technique / position')).toHaveValue('Half Guard');
-  await expect(page.locator('.toolbar').getByRole('button',{name:'rounded shape'})).toHaveCount(0);
-  await page.locator('.react-flow__pane').click({position:{x:1100,y:40}});
-  await expect(page.getByLabel('Technique / position')).toHaveCount(0);
-  await expect(page.locator('.toolbar').getByRole('button',{name:'rounded shape'})).toBeVisible();
+  await expect(page.getByLabel("Technique / position")).toHaveValue(
+    "Half Guard",
+  );
+  await expect(
+    page.locator(".toolbar").getByRole("button", { name: "rounded shape" }),
+  ).toHaveCount(0);
+  await page
+    .locator(".react-flow__pane")
+    .click({ position: { x: 1100, y: 40 } });
+  await expect(page.getByLabel("Technique / position")).toHaveCount(0);
+  await expect(
+    page.locator(".toolbar").getByRole("button", { name: "rounded shape" }),
+  ).toBeVisible();
 });

@@ -1,6 +1,41 @@
 import { expect, test } from "@playwright/test";
 import { halfGuardFixture } from "../src/domain/fixture";
 
+test("Clear roll confirms, clears only the canvas, and preserves the saved roll", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByText("My map", { exact: true }).click();
+  await page.getByLabel("Jitsuka JSON").fill(JSON.stringify(halfGuardFixture));
+  await page.getByRole("button", { name: "Roll", exact: true }).click();
+  await expect(page.locator(".react-flow__node")).toHaveCount(2);
+  const saved = await page.evaluate(() =>
+    localStorage.getItem("jitsuka:document:v1"),
+  );
+  page.once("dialog", async (dialog) => {
+    expect(dialog.message()).toBe(
+      "are you sure? these will delete your roll data from the map (not your device)",
+    );
+    await dialog.dismiss();
+  });
+  await page.getByRole("button", { name: "Clear roll" }).click();
+  await expect(page.locator(".react-flow__node")).toHaveCount(2);
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Clear roll" }).click();
+  await expect(page.locator(".react-flow__node")).toHaveCount(0);
+  await expect(page.locator(".react-flow__edge")).toHaveCount(0);
+  await expect(page.getByLabel("Jitsuka JSON")).toHaveValue("");
+  await page.getByRole("button", { name: "Close My map" }).click();
+  await page.getByRole("button", { name: "Zoom In", exact: true }).click();
+  // Let the normal debounce elapse: clearing and moving the viewport must not save the blank canvas.
+  await page.waitForTimeout(500);
+  expect(
+    await page.evaluate(() => localStorage.getItem("jitsuka:document:v1")),
+  ).toBe(saved);
+  await page.reload();
+  await expect(page.locator(".react-flow__node")).toHaveCount(2);
+});
+
 test("Roll restores a blank device; edits persist and Copy JSON copies the canonical document", async ({
   page,
 }) => {

@@ -423,9 +423,15 @@ select:focus {
   box-shadow: 0 4px 16px #0001;
 }
 .mode-tip button {
+  background: #1859a3;
+  color: #fff;
+  border-color: #1859a3;
   margin-left: 14px;
   min-height: 28px;
   padding: 5px 8px;
+}
+.mode-tip button:hover {
+  background: #124781;
 }
 
 .empty {
@@ -770,4 +776,15 @@ textarea {
 }
 .link-editor details {
   margin: 8px 0;
+}
+.clear-roll {
+  margin-top: 12px;
+  background: #fff;
+  border: 1px solid #000;
+  color: #b91c1c;
+}
+.clear-roll:hover {
+  background: #fff;
+  border-color: #000;
+  color: #991b1b;
 }

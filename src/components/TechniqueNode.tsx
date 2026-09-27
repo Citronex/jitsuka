@@ -15,7 +15,9 @@ export function TechniqueNode({
       }
       className={`technique ${data.appearance?.shape ?? "rounded"} ${data.appearance?.color ?? "blue"} ${selected ? "selected" : ""} ${data.connecting ? "connecting" : ""}`}
     >
-      <Handle type="target" position={Position.Top} id="top" />
+      <Handle type="source" position={Position.Top} id="top" />
+      <Handle type="source" position={Position.Left} id="left" />
+      <Handle type="source" position={Position.Right} id="right" />
       <span
         className={`technique-title${linked ? " technique-title-linked" : ""}`}
       >

@@ -28,10 +28,12 @@ import { AppTools } from "./components/AppTools";
 import { EditLauncher } from "./components/EditLauncher";
 import { ColorChoices, ShapeChoices } from "./components/Choices";
 import { safeUrl, type Connection, type Technique } from "./model";
+import { blankDocument } from "./domain/schema";
 const nodeTypes = { technique: TechniqueNode };
 export function App() {
   const [initial] = useState(restoreLocalDocument);
   const [map, setMap] = useState(initial.document);
+  const [canvasCleared, setCanvasCleared] = useState(false);
   const [measurements, setMeasurements] = useState<
     Record<string, { width: number; height: number }>
   >({});
@@ -45,6 +47,7 @@ export function App() {
     id: string;
   } | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [editPickerOpen, setEditPickerOpen] = useState(false);
   const [addingId, setAddingId] = useState<string | null>(null);
   const [color, setColor] = useState<Technique["color"]>("blue");
   const [connector, setConnector] = useState<Connection["kind"] | null>(null);
@@ -62,6 +65,7 @@ export function App() {
       ? map.edges.find((e) => e.id === selected.id)
       : undefined;
   function update(updater: (current: JitsukaDocument) => JitsukaDocument) {
+    setCanvasCleared(false);
     dirty.current = true;
     setMap(updater);
   }
@@ -146,6 +150,7 @@ export function App() {
         });
       else setStart(start === id ? null : id);
     } else {
+      setEditPickerOpen(false);
       setAddOpen(false);
       setSelected({ type: "node", id });
     }
@@ -240,6 +245,20 @@ export function App() {
         <div className="header-actions">
           <AppTools
             map={map}
+            onClear={() => {
+              autosave.flush();
+              autosave.cancel();
+              dirty.current = false;
+              setMap(blankDocument());
+              setCanvasCleared(true);
+              setMeasurements({});
+              setSelected(null);
+              setAddingId(null);
+              setStart(null);
+              setConnector(null);
+              setAddOpen(false);
+              setEditPickerOpen(false);
+            }}
             onImport={(imported) => {
               update(() => imported);
               autosave.schedule(imported);
@@ -256,7 +275,11 @@ export function App() {
             }}
           />
           <span className="save-status">
-            {saveError ? "Not saved" : "Saved on this device"}
+            {saveError
+              ? "Not saved"
+              : canvasCleared
+                ? "Canvas cleared · saved roll kept"
+                : "Saved on this device"}
           </span>
           <button
             onClick={() => flow.fitView({ padding: 0.25, duration: 250 })}
@@ -283,6 +306,7 @@ export function App() {
           hidden={!presentation}
           onEdit={() => {
             setPresentation(false);
+            setEditPickerOpen(false);
             setAddOpen(false);
             setSelected(null);
           }}
@@ -305,7 +329,8 @@ export function App() {
           zoomOnPinch
           autoPanOnNodeDrag={false}
           onMoveEnd={(event, viewport) => {
-            if (event) update((current) => ({ ...current, viewport }));
+            if (event && !canvasCleared)
+              update((current) => ({ ...current, viewport }));
           }}
           onNodesChange={(changes) => {
             const dimensions = changes.filter(
@@ -378,6 +403,7 @@ export function App() {
                   aria-expanded={false}
                   onClick={() => {
                     setSelected(null);
+                    setEditPickerOpen(false);
                     setAddOpen(true);
                   }}
                 >
@@ -431,12 +457,45 @@ export function App() {
               className="panel collapsed-editor"
               aria-label="Edit a technique collapsed"
             >
-              <div
+              <button
                 className="expand-tools"
-                title="Select a technique on the map to edit it"
+                aria-expanded={editPickerOpen}
+                onClick={() => {
+                  setEditPickerOpen(!editPickerOpen);
+                  setAddOpen(false);
+                  setConnector(null);
+                  setStart(null);
+                }}
               >
-                Edit a technique <span aria-hidden="true">＋</span>
-              </div>
+                Edit a technique{" "}
+                <span aria-hidden="true">{editPickerOpen ? "−" : "＋"}</span>
+              </button>
+              {editPickerOpen && (
+                <label>
+                  Choose a technique
+                  <select
+                    aria-label="Choose a technique to edit"
+                    value=""
+                    onChange={(event) => {
+                      if (event.target.value) {
+                        chooseNode(event.target.value);
+                        setEditPickerOpen(false);
+                      }
+                    }}
+                  >
+                    <option value="">
+                      {map.nodes.length
+                        ? "Select a technique"
+                        : "Add a technique first"}
+                    </option>
+                    {map.nodes.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.label || "Untitled technique"}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
             </aside>
           )}
           {!presentation && (node || edge) && (

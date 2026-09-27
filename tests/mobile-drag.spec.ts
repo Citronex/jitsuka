@@ -44,7 +44,8 @@ test("newly named technique can be dragged with touch without losing the map", a
     });
   });
   const client = await context.newCDPSession(page);
-  const x = bounds.x + bounds.width - 8,
+  // Drag the body, clear of the connection handle on the right side.
+  const x = bounds.x + bounds.width - 24,
     y = bounds.y + bounds.height / 2;
   await client.send("Input.dispatchTouchEvent", {
     type: "touchStart",
@@ -104,7 +105,7 @@ test("interrupted edge drag stops moving the canvas after fingers lift", async (
     .filter({ hasText: "Interrupted drag" });
   const box = (await node.boundingBox())!;
   const client = await context.newCDPSession(page);
-  const x = box.x + box.width - 8;
+  const x = box.x + box.width - 24;
   const y = box.y + box.height / 2;
   const bottom = page.viewportSize()!.height - 5;
   await client.send("Input.dispatchTouchEvent", {

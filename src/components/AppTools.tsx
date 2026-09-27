@@ -10,9 +10,11 @@ import { DataPanel } from "./DataPanel";
 export function AppTools({
   map,
   onImport,
+  onClear,
 }: {
   map: JitsukaDocument;
   onImport: (map: JitsukaDocument) => void;
+  onClear: () => void;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const details = useRef<HTMLDetailsElement>(null);
@@ -69,6 +71,25 @@ export function AppTools({
           <button onClick={exportMap}>Take your roll</button>
           <button onClick={() => input.current?.click()}>Feed your roll</button>
         </div>
+        <button
+          className="clear-roll"
+          onClick={() => {
+            if (
+              !window.confirm(
+                "are you sure? these will delete your roll data from the map (not your device)",
+              )
+            )
+              return;
+            onClear();
+            setPending(null);
+            setImportRevision((value) => value + 1);
+            setMessage(
+              "Canvas cleared. Reload to restore your saved roll. Editing or loading another roll will replace the saved roll.",
+            );
+          }}
+        >
+          Clear roll
+        </button>
         <input
           hidden
           ref={input}
