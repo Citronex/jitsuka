@@ -1,4 +1,6 @@
 import { expect, test, devices } from "@playwright/test";
+import { seedLegacyMap } from "./seed";
+test.beforeEach(async ({ page }) => seedLegacyMap(page));
 test.use({ ...devices["Pixel 7"], defaultBrowserType: "chromium" });
 test("newly named technique can be dragged with touch without losing the map", async ({
   page,
@@ -66,11 +68,16 @@ test("newly named technique can be dragged with touch without losing the map", a
   );
   const end = (await node.boundingBox())!;
   expect(end.y).toBeGreaterThan(bounds.y + 40);
+  await expect
+    .poll(() =>
+      page.evaluate(() => localStorage.getItem("jitsuka:document:v1")),
+    )
+    .not.toBeNull();
   const saved = await page.evaluate(() =>
-    JSON.parse(localStorage.getItem("jitsuka.map.v1")!),
+    JSON.parse(localStorage.getItem("jitsuka:document:v1")!),
   );
   const moved = saved.nodes.find(
-    (n: { title: string }) => n.title === "Mobile drag",
+    (n: { label: string }) => n.label === "Mobile drag",
   );
   expect(
     Number.isFinite(moved.position.x) && Number.isFinite(moved.position.y),

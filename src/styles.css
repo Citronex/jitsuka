@@ -428,7 +428,6 @@ select:focus {
   padding: 5px 8px;
 }
 
-
 .empty {
   position: absolute;
   top: 45%;
@@ -739,4 +738,36 @@ textarea {
   min-height: 40px;
   font-size: 13px;
   font-weight: 600;
+}
+.data-panel {
+  margin: 16px 0;
+}
+.data-panel textarea {
+  font-family: monospace;
+  font-size: 12px;
+}
+.data-panel textarea:focus::placeholder {
+  color: transparent;
+}
+@media (max-width: 600px) {
+  .data-panel textarea {
+    font-size: 16px;
+  }
+}
+.roll-spinner {
+  display: inline-block;
+  animation: roll-spin 0.7s linear infinite;
+}
+@keyframes roll-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .roll-spinner {
+    animation: none;
+  }
+}
+.link-editor details {
+  margin: 8px 0;
 }

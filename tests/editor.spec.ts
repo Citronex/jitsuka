@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+import { seedLegacyMap } from "./seed";
+test.beforeEach(async ({ page }) => seedLegacyMap(page));
 test("create, label, persist and delete a connected technique", async ({
   page,
 }) => {

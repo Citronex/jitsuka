@@ -4,46 +4,41 @@ import {
   BackgroundVariant,
   ConnectionMode,
   Controls,
-  MarkerType,
   ReactFlow,
   useReactFlow,
   type Connection as FlowConnection,
 } from "@xyflow/react";
+import { TechniqueNode } from "./components/TechniqueNode";
 import {
-  TechniqueNode,
+  documentToFlow,
   type TechniqueFlowNode,
-} from "./components/TechniqueNode";
+} from "./editor/documentToFlow";
+import {
+  type JitsukaDocument,
+  type JitsukaNode,
+  type JitsukaEdge,
+} from "./domain/schema";
+import {
+  createAutosave,
+  restoreLocalDocument,
+  saveLocalJitsukaDocument,
+} from "./persistence/localJitsukaStorage";
+import { LinkEditor } from "./components/LinkEditor";
 import { AppTools } from "./components/AppTools";
 import { EditLauncher } from "./components/EditLauncher";
 import { ColorChoices, ShapeChoices } from "./components/Choices";
-import {
-  removeTechnique,
-  safeUrl,
-  type Connection,
-  type GameMap,
-  type Technique,
-} from "./model";
-import { loadMap, saveMap } from "./storage";
+import { safeUrl, type Connection, type Technique } from "./model";
 const nodeTypes = { technique: TechniqueNode };
-function readInitialMap() {
-  try {
-    return loadMap(window.localStorage);
-  } catch {
-    return loadMap({
-      getItem: () => {
-        throw new Error("Storage unavailable");
-      },
-      setItem: () => {},
-    });
-  }
-}
 export function App() {
-  const [initial] = useState(readInitialMap);
-  const [map, setMap] = useState(initial.map);
+  const [initial] = useState(restoreLocalDocument);
+  const [map, setMap] = useState(initial.document);
   const [measurements, setMeasurements] = useState<
     Record<string, { width: number; height: number }>
   >({});
   const [saveError, setSaveError] = useState(initial.error);
+  const [autosave] = useState(() =>
+    createAutosave(saveLocalJitsukaDocument, setSaveError),
+  );
   const [presentation, setPresentation] = useState(true);
   const [selected, setSelected] = useState<{
     type: "node" | "edge";
@@ -66,32 +61,39 @@ export function App() {
     selected?.type === "edge"
       ? map.edges.find((e) => e.id === selected.id)
       : undefined;
-  function update(updater: (current: GameMap) => GameMap) {
+  function update(updater: (current: JitsukaDocument) => JitsukaDocument) {
     dirty.current = true;
     setMap(updater);
   }
   useEffect(() => {
     if (!dirty.current) return;
-    try {
-      setSaveError(saveMap(window.localStorage, map));
-    } catch {
-      setSaveError(
-        "Local storage is unavailable. Changes remain in this tab only.",
-      );
-    }
-  }, [map]);
+    autosave.schedule(map);
+  }, [map, autosave]);
+  useEffect(() => {
+    const flush = () => autosave.flush();
+    const hide = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", hide);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", hide);
+      autosave.flush();
+    };
+  }, [autosave]);
   useEffect(() => {
     if (selected?.type === "edge")
       edgeRef.current?.focus({ preventScroll: true });
   }, [selected]);
-  function patchNode(patch: Partial<Technique>) {
+  function patchNode(patch: Partial<JitsukaNode>) {
     if (node)
       update((m) => ({
         ...m,
         nodes: m.nodes.map((n) => (n.id === node.id ? { ...n, ...patch } : n)),
       }));
   }
-  function patchEdge(patch: Partial<Connection>) {
+  function patchEdge(patch: Partial<JitsukaEdge>) {
     if (edge)
       update((m) => ({
         ...m,
@@ -109,7 +111,20 @@ export function App() {
         ...m,
         edges: [
           ...m.edges,
-          { ...connection, id, kind: connector ?? "arrow", label: "" },
+          {
+            id,
+            source: connection.source,
+            target: connection.target,
+            label: "",
+            appearance: {
+              arrow: connector === "line" ? "none" : "end",
+              line: "solid",
+              sourceAnchor:
+                connection.sourceHandle === "top" ? "top" : "bottom",
+              targetAnchor:
+                connection.targetHandle === "bottom" ? "bottom" : "top",
+            },
+          },
         ],
       }));
     setSelected({ type: "edge", id });
@@ -119,7 +134,7 @@ export function App() {
   function chooseNode(id: string) {
     const technique = map.nodes.find((n) => n.id === id)!;
     if (presentation) {
-      const url = safeUrl(technique.url);
+      const url = safeUrl(technique.links?.[0]?.url);
       if (url) window.open(url, "_blank", "noopener,noreferrer");
     } else if (connector) {
       if (start && start !== id)
@@ -152,7 +167,13 @@ export function App() {
       ...m,
       nodes: [
         ...m.nodes,
-        { id, title: "New technique", shape, color, position },
+        {
+          id,
+          type: "technique",
+          label: "New technique",
+          appearance: { shape, color },
+          position,
+        },
       ],
     }));
     setConnector(null);
@@ -168,44 +189,23 @@ export function App() {
     if (!selected) return;
     update((m) =>
       selected.type === "node"
-        ? removeTechnique(m, selected.id)
+        ? {
+            ...m,
+            nodes: m.nodes.filter((n) => n.id !== selected.id),
+            edges: m.edges.filter(
+              (e) => e.source !== selected.id && e.target !== selected.id,
+            ),
+          }
         : { ...m, edges: m.edges.filter((e) => e.id !== selected.id) },
     );
     setSelected(null);
   }
-  const nodes: TechniqueFlowNode[] = map.nodes.map((n) => ({
-    id: n.id,
-    type: "technique",
-    position: n.position,
-    measured: measurements[n.id],
-    data: { ...n, presentation, connecting: start === n.id },
-    selected: !presentation && selected?.id === n.id,
-    ariaLabel: n.title,
-  }));
-  const edges = map.edges.map((e) => ({
-    ...e,
-    type: "default",
-    sourceHandle: e.sourceHandle ?? "bottom",
-    targetHandle: e.targetHandle ?? "top",
-    selected: !presentation && selected?.id === e.id,
-    markerEnd:
-      e.kind === "arrow"
-        ? { type: MarkerType.ArrowClosed, color: "#62685f" }
-        : undefined,
-    label: e.label
-      ? e.label.split("\n").map((line, index) => (
-          <tspan key={index} x={0} y={12 + index * 18}>
-            {line || "\u00a0"}
-          </tspan>
-        ))
-      : undefined,
-    interactionWidth: 28,
-    style: { strokeWidth: 2, stroke: "#62685f" },
-    labelStyle: { fontSize: 12, fontWeight: 600, fill: "#444b40" },
-    labelBgStyle: { fill: "#f7f8f3" },
-    labelBgPadding: [10, 7] as [number, number],
-    labelBgBorderRadius: 6,
-  }));
+  const { nodes, edges } = documentToFlow(map, {
+    presentation,
+    selectedId: selected?.id,
+    start,
+    measurements,
+  });
   return (
     <div
       className={`app ${presentation ? "presentation" : ""}`}
@@ -235,17 +235,24 @@ export function App() {
           </div>
         </div>
         <div className="header-center">
-          My game plan <span> / {presentation ? "View" : "Edit"}</span>
+          {map.metadata.title} <span> / {presentation ? "View" : "Edit"}</span>
         </div>
         <div className="header-actions">
           <AppTools
             map={map}
             onImport={(imported) => {
               update(() => imported);
+              autosave.schedule(imported);
+              autosave.flush();
+              setMeasurements({});
               setSelected(null);
               setStart(null);
               setConnector(null);
-              requestAnimationFrame(() => flow.fitView({ padding: 0.3 }));
+              requestAnimationFrame(() =>
+                imported.viewport
+                  ? flow.setViewport(imported.viewport)
+                  : flow.fitView({ padding: 0.3 }),
+              );
             }}
           />
           <span className="save-status">
@@ -284,7 +291,8 @@ export function App() {
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
-          fitView
+          fitView={!initial.document.viewport}
+          defaultViewport={initial.document.viewport}
           fitViewOptions={{ padding: 0.3 }}
           minZoom={0.15}
           maxZoom={2.5}
@@ -296,6 +304,9 @@ export function App() {
           deleteKeyCode={null}
           zoomOnPinch
           autoPanOnNodeDrag={false}
+          onMoveEnd={(event, viewport) => {
+            if (event) update((current) => ({ ...current, viewport }));
+          }}
           onNodesChange={(changes) => {
             const dimensions = changes.filter(
               (change) => change.type === "dimensions",
@@ -463,33 +474,46 @@ export function App() {
                     Technique / position
                     <input
                       ref={titleRef}
-                      value={node.title}
+                      value={node.label}
                       maxLength={80}
-                      onChange={(e) => patchNode({ title: e.target.value })}
+                      onChange={(e) => patchNode({ label: e.target.value })}
                     />
                   </label>
                   <label>
-                    Video or reference link
-                    <input
-                      type="url"
-                      placeholder="add video link"
-                      value={node.url ?? ""}
-                      onChange={(e) => patchNode({ url: e.target.value })}
-                      aria-invalid={!!node.url && !safeUrl(node.url)}
-                    />
+                    Type
+                    <select
+                      aria-label="Node type"
+                      value={node.type}
+                      onChange={(event) =>
+                        patchNode({
+                          type: event.target.value as JitsukaNode["type"],
+                        })
+                      }
+                    >
+                      <option value="position">Position</option>
+                      <option value="technique">Technique</option>
+                      <option value="reaction">Reaction</option>
+                      <option value="goal">Goal</option>
+                    </select>
                   </label>
-                  {node.url && !safeUrl(node.url) && (
-                    <p className="error">Use a complete http or https URL.</p>
-                  )}
+                  <LinkEditor
+                    key={node.id}
+                    links={node.links ?? []}
+                    onChange={(links) => patchNode({ links })}
+                  />
                   <p className="field-caption">Shape</p>
                   <ShapeChoices
-                    value={node.shape}
-                    onChange={(shape) => patchNode({ shape })}
+                    value={node.appearance?.shape}
+                    onChange={(shape) =>
+                      patchNode({ appearance: { ...node.appearance, shape } })
+                    }
                   />
                   <p className="field-caption">Color</p>
                   <ColorChoices
-                    value={node.color}
-                    onChange={(color) => patchNode({ color })}
+                    value={node.appearance?.color as Technique["color"]}
+                    onChange={(color) =>
+                      patchNode({ appearance: { ...node.appearance, color } })
+                    }
                   />
                 </>
               )}
@@ -509,10 +533,15 @@ export function App() {
                   <label>
                     Connector
                     <select
-                      value={edge.kind}
+                      value={
+                        edge.appearance?.arrow === "end" ? "arrow" : "line"
+                      }
                       onChange={(e) =>
                         patchEdge({
-                          kind: e.target.value === "line" ? "line" : "arrow",
+                          appearance: {
+                            ...edge.appearance,
+                            arrow: e.target.value === "line" ? "none" : "end",
+                          },
                         })
                       }
                     >

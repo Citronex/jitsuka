@@ -1,17 +1,26 @@
 import { useRef, useState } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
-import { gameMapSchema, type GameMap } from "../model";
+import type { JitsukaDocument } from "../domain/schema";
+import {
+  parseJitsukaDocument,
+  serializeJitsukaDocument,
+} from "../domain/serialization";
+import { DataPanel } from "./DataPanel";
 
 export function AppTools({
   map,
   onImport,
 }: {
-  map: GameMap;
-  onImport: (map: GameMap) => void;
+  map: JitsukaDocument;
+  onImport: (map: JitsukaDocument) => void;
 }) {
   const input = useRef<HTMLInputElement>(null);
+  const details = useRef<HTMLDetailsElement>(null);
+  const summary = useRef<HTMLElement>(null);
+  const [open, setOpen] = useState(false);
+  const [importRevision, setImportRevision] = useState(0);
   const [message, setMessage] = useState("");
-  const [pending, setPending] = useState<GameMap | null>(null);
+  const [pending, setPending] = useState<JitsukaDocument | null>(null);
   const {
     offlineReady: [offlineReady],
     needRefresh: [needRefresh],
@@ -19,7 +28,7 @@ export function AppTools({
   } = useRegisterSW();
   function exportMap() {
     const url = URL.createObjectURL(
-      new Blob([JSON.stringify(map, null, 2)], { type: "application/json" }),
+      new Blob([serializeJitsukaDocument(map)], { type: "application/json" }),
     );
     const a = document.createElement("a");
     a.href = url;
@@ -28,18 +37,37 @@ export function AppTools({
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   return (
-    <details className="app-tools">
-      <summary>My map</summary>
+    <details
+      className="app-tools"
+      ref={details}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
+      <summary ref={summary}>My map</summary>
       <div className="app-tools-panel panel">
-        <h2>Take your game with you</h2>
+        <div className="inspector-heading">
+          <h2>Take your game with you</h2>
+          <button
+            aria-label="Close My map"
+            onClick={() => {
+              if (details.current) details.current.open = false;
+              summary.current?.focus();
+            }}
+          >
+            ×
+          </button>
+        </div>
         <p>Version {import.meta.env.VITE_APP_VERSION}</p>
+        {open && (
+          <DataPanel key={importRevision} document={map} onRoll={onImport} />
+        )}
         <p>
-          Maps are saved on this device. Export your map, send the file to your
-          phone, then import it there.
+          Your map saves automatically. Roll applies the JSON to your map. Copy
+          JSON copies your current map for sharing. Take your roll downloads a
+          file; Feed your roll loads one.
         </p>
         <div className="transfer-buttons">
-          <button onClick={exportMap}>Export map</button>
-          <button onClick={() => input.current?.click()}>Import map</button>
+          <button onClick={exportMap}>Take your roll</button>
+          <button onClick={() => input.current?.click()}>Feed your roll</button>
         </div>
         <input
           hidden
@@ -53,7 +81,7 @@ export function AppTools({
             if (!file) return;
             try {
               if (file.size > 5_000_000) throw new Error("Too large");
-              setPending(gameMapSchema.parse(JSON.parse(await file.text())));
+              setPending(parseJitsukaDocument(await file.text()));
               setMessage("");
             } catch {
               setPending(null);
@@ -72,6 +100,7 @@ export function AppTools({
             <button
               onClick={() => {
                 onImport(pending);
+                setImportRevision((value) => value + 1);
                 setPending(null);
                 setMessage("Map imported.");
               }}

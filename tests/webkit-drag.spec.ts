@@ -1,4 +1,6 @@
 import { expect, test, devices } from "@playwright/test";
+import { seedLegacyMap } from "./seed";
+test.beforeEach(async ({ page }) => seedLegacyMap(page));
 test.use({ ...devices["iPhone 13"], browserName: "webkit" });
 test("WebKit keeps every technique visible on each drag frame", async ({
   page,

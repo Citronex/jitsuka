@@ -1,21 +1,25 @@
-import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
-import { safeUrl, type Technique } from "../model";
-export type TechniqueFlowNode = Node<
-  Technique & { presentation: boolean; connecting: boolean },
-  "technique"
->;
+import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { safeUrl } from "../model";
+import type { TechniqueFlowNode } from "../editor/documentToFlow";
 export function TechniqueNode({
   data,
   selected,
 }: NodeProps<TechniqueFlowNode>) {
-  const linked = !!safeUrl(data.url);
+  const linked = !!safeUrl(data.links?.[0]?.url);
   return (
     <div
-      className={`technique ${data.shape} ${data.color} ${selected ? "selected" : ""} ${data.connecting ? "connecting" : ""}`}
+      style={
+        data.appearance?.color?.startsWith("#")
+          ? { backgroundColor: data.appearance.color }
+          : undefined
+      }
+      className={`technique ${data.appearance?.shape ?? "rounded"} ${data.appearance?.color ?? "blue"} ${selected ? "selected" : ""} ${data.connecting ? "connecting" : ""}`}
     >
       <Handle type="target" position={Position.Top} id="top" />
-      <span className={`technique-title${linked ? " technique-title-linked" : ""}`}>
-        {data.title || "Untitled technique"}
+      <span
+        className={`technique-title${linked ? " technique-title-linked" : ""}`}
+      >
+        {data.label || "Untitled technique"}
       </span>
       {linked && (
         <span className="link-mark" aria-label="Has reference link">

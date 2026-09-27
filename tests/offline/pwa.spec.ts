@@ -33,7 +33,7 @@ test("installed assets, offline editing, map transfer, and reload under Pages pa
   ).toBeVisible();
   await page.getByText("My map", { exact: true }).click();
   const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export map" }).click();
+  await page.getByRole("button", { name: "Take your roll" }).click();
   expect((await download).suggestedFilename()).toBe("jitsuka-map.json");
   await page.getByLabel("Import map file").setInputFiles({
     name: "invalid.json",
