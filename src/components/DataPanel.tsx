@@ -8,9 +8,11 @@ import {
 export function DataPanel({
   document,
   onRoll,
+  onClear,
 }: {
   document: JitsukaDocument;
   onRoll: (document: JitsukaDocument) => void;
+  onClear: () => void;
 }) {
   // Mounted when the panel opens: snapshot once, then preserve the user's draft.
   const [text, setText] = useState(() =>
@@ -76,14 +78,14 @@ export function DataPanel({
         Jitsuka JSON
         <textarea
           ref={textarea}
-          rows={6}
+          rows={9}
           value={text}
           spellCheck={false}
           placeholder="Paste a Jitsuka map, then Roll"
           onChange={(event) => setText(event.target.value)}
         />
       </label>
-      <div className="transfer-buttons">
+      <div className="transfer-buttons roll-actions">
         <button className="primary" disabled={busy} onClick={() => void roll()}>
           {busy && (
             <span className="roll-spinner" aria-hidden="true">
@@ -94,6 +96,9 @@ export function DataPanel({
         </button>
         <button disabled={busy} onClick={() => void copyJson()}>
           Copy JSON
+        </button>
+        <button className="clear-roll" disabled={busy} onClick={onClear}>
+          Clear roll
         </button>
       </div>
       {message && <p role="status">{message}</p>}

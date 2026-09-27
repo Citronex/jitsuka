@@ -646,7 +646,8 @@ textarea {
 }
 .expand-tools {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 12px;
   align-items: center;
   width: 100%;
   border: 0;
@@ -745,6 +746,27 @@ textarea {
   font-size: 13px;
   font-weight: 600;
 }
+.editor-dock .panel:has(> .expand-tools[aria-expanded="false"]) {
+  width: fit-content;
+  max-width: 100%;
+}
+.app-tools-panel .close-map {
+  margin-left: auto;
+  width: 44px;
+  min-height: 44px;
+  flex-shrink: 0;
+  font-size: 30px;
+  line-height: 1;
+}
+.map-panel-heading {
+  margin-bottom: 4px;
+}
+.map-panel-heading p {
+  margin: 0;
+}
+.map-panel-heading + .data-panel {
+  margin-top: 0;
+}
 .data-panel {
   margin: 16px 0;
 }
@@ -778,10 +800,18 @@ textarea {
   margin: 8px 0;
 }
 .clear-roll {
-  margin-top: 12px;
   background: #fff;
   border: 1px solid #000;
   color: #b91c1c;
+}
+.roll-actions {
+  gap: 6px;
+}
+.roll-actions button {
+  padding: 10px 8px;
+  font-size: 12px;
+  white-space: nowrap;
+  flex: 1 0 auto;
 }
 .clear-roll:hover {
   background: #fff;

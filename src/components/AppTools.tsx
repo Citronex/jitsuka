@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import type { JitsukaDocument } from "../domain/schema";
 import {
@@ -23,6 +23,29 @@ export function AppTools({
   const [importRevision, setImportRevision] = useState(0);
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState<JitsukaDocument | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    const closeOutside = (event: PointerEvent) => {
+      if (
+        event.target instanceof Node &&
+        !details.current?.contains(event.target)
+      ) {
+        if (details.current) details.current.open = false;
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        if (details.current) details.current.open = false;
+        summary.current?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", closeOutside, true);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOutside, true);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
   const {
     offlineReady: [offlineReady],
     needRefresh: [needRefresh],
@@ -46,9 +69,10 @@ export function AppTools({
     >
       <summary ref={summary}>My map</summary>
       <div className="app-tools-panel panel">
-        <div className="inspector-heading">
-          <h2>Take your game with you</h2>
+        <div className="inspector-heading map-panel-heading">
+          <p>Version {import.meta.env.VITE_APP_VERSION}</p>
           <button
+            className="close-map"
             aria-label="Close My map"
             onClick={() => {
               if (details.current) details.current.open = false;
@@ -58,9 +82,26 @@ export function AppTools({
             ×
           </button>
         </div>
-        <p>Version {import.meta.env.VITE_APP_VERSION}</p>
         {open && (
-          <DataPanel key={importRevision} document={map} onRoll={onImport} />
+          <DataPanel
+            key={importRevision}
+            document={map}
+            onRoll={onImport}
+            onClear={() => {
+              if (
+                !window.confirm(
+                  "are you sure? these will delete your roll data from the map (not your device)",
+                )
+              )
+                return;
+              onClear();
+              setPending(null);
+              setImportRevision((value) => value + 1);
+              setMessage(
+                "Canvas cleared. Reload to restore your saved roll. Editing or loading another roll will replace the saved roll.",
+              );
+            }}
+          />
         )}
         <p>
           Your map saves automatically. Roll applies the JSON to your map. Copy
@@ -71,25 +112,6 @@ export function AppTools({
           <button onClick={exportMap}>Take your roll</button>
           <button onClick={() => input.current?.click()}>Feed your roll</button>
         </div>
-        <button
-          className="clear-roll"
-          onClick={() => {
-            if (
-              !window.confirm(
-                "are you sure? these will delete your roll data from the map (not your device)",
-              )
-            )
-              return;
-            onClear();
-            setPending(null);
-            setImportRevision((value) => value + 1);
-            setMessage(
-              "Canvas cleared. Reload to restore your saved roll. Editing or loading another roll will replace the saved roll.",
-            );
-          }}
-        >
-          Clear roll
-        </button>
         <input
           hidden
           ref={input}
