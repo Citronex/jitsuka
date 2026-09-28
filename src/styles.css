@@ -165,30 +165,6 @@ h2 {
   place-items: center;
   height: 42px;
 }
-.shape-icon {
-  display: block;
-  width: 23px;
-  height: 17px;
-  border: 1.6px solid #53604c;
-  background: #f3f5ee;
-}
-.shape-icon.rounded {
-  border-radius: 5px;
-}
-.shape-icon.pill {
-  border-radius: 50px;
-}
-.shape-icon.circle {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-}
-.shape-icon.diamond {
-  width: 17px;
-  height: 17px;
-  transform: rotate(45deg);
-  border-radius: 3px;
-}
 .swatch {
   width: 23px;
   height: 23px;
@@ -297,13 +273,12 @@ select:focus {
 .technique {
   width: 190px;
   min-height: 82px;
-  border: 1.5px solid #808a76;
+  border: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px 23px;
+  padding: 22px 36px;
   position: relative;
-  box-shadow: 0 4px 10px #3445280a;
   font-size: 14px;
   font-weight: 650;
   text-align: center;
@@ -312,67 +287,47 @@ select:focus {
   overflow-wrap: anywhere;
 }
 .technique-title-linked {
-  color: #1859a3;
+  color: inherit;
 }
 .presentation .technique:hover .technique-title-linked {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-.technique.rounded {
-  border-radius: 15px;
-}
-.technique.pill {
-  border-radius: 60px;
-}
-.technique.circle {
-  width: 130px;
-  height: 130px;
-  border-radius: 50%;
-  padding: 20px;
-}
 .technique.diamond {
-  width: 150px;
-  height: 150px;
-  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-  border: 0;
-  border-radius: 0;
-  padding: 35px;
+  padding: 42px;
 }
-.technique.diamond:before {
-  content: "";
+.technique-shape {
   position: absolute;
-  inset: 23px;
-  border: 1.5px solid #808a76;
-  transform: rotate(45deg);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
   pointer-events: none;
 }
-.technique.selected,
-.technique.connecting {
-  outline: 3px solid #758861;
-  outline-offset: 5px;
+.technique-shape > * {
+  stroke: inherit;
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
 }
-.technique.diamond.selected,
-.technique.diamond.connecting {
-  background: #e1d293;
+.technique.selected .technique-shape > *,
+.technique.connecting .technique-shape > * {
+  stroke-width: 3px;
+}
+.technique-title {
+  position: relative;
 }
 .link-mark {
   position: absolute;
   right: 15px;
   top: 10px;
   font-size: 14px;
-  color: #6e7b61;
+  color: inherit;
 }
 .react-flow__handle {
   width: 12px;
   height: 12px;
   background: #fffefb;
   border: 1.5px solid #879875;
-}
-.technique.diamond .react-flow__handle-top {
-  top: 7px;
-}
-.technique.diamond .react-flow__handle-bottom {
-  bottom: 7px;
 }
 .presentation .react-flow__handle {
   visibility: hidden;
@@ -816,5 +771,33 @@ textarea {
 .clear-roll:hover {
   background: #fff;
   border-color: #000;
+  color: #991b1b;
+}
+.toolbar .add-technique {
+  margin-top: 16px;
+}
+
+.area-delete-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  touch-action: none;
+  cursor: crosshair;
+}
+.area-delete-box {
+  position: absolute;
+  border: 2px dashed #b91c1c;
+  background: #dc262622;
+  pointer-events: none;
+}
+.area-delete-tip {
+  z-index: 20;
+  max-width: calc(100% - 32px);
+  flex-wrap: wrap;
+}
+.editor-dock[hidden] {
+  display: none;
+}
+.area-delete-button {
   color: #991b1b;
 }

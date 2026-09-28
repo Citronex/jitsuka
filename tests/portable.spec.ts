@@ -10,7 +10,7 @@ test("Clear roll confirms, clears only the canvas, and preserves the saved roll"
   await page.getByRole("button", { name: "Roll", exact: true }).click();
   await expect(page.locator(".react-flow__node")).toHaveCount(2);
   const saved = await page.evaluate(() =>
-    localStorage.getItem("jitsuka:document:v1"),
+    localStorage.getItem("jitsuka:document:v3"),
   );
   page.once("dialog", async (dialog) => {
     expect(dialog.message()).toBe(
@@ -30,7 +30,7 @@ test("Clear roll confirms, clears only the canvas, and preserves the saved roll"
   // Let the normal debounce elapse: clearing and moving the viewport must not save the blank canvas.
   await page.waitForTimeout(500);
   expect(
-    await page.evaluate(() => localStorage.getItem("jitsuka:document:v1")),
+    await page.evaluate(() => localStorage.getItem("jitsuka:document:v3")),
   ).toBe(saved);
   await page.reload();
   await expect(page.locator(".react-flow__node")).toHaveCount(2);
@@ -75,8 +75,8 @@ test("Roll restores a blank device; edits persist and Copy JSON copies the canon
   await expect(page.locator(".react-flow__node")).toHaveCount(2);
   await page.getByRole("button", { name: "Edit map" }).click();
   await page.locator('.react-flow__node[data-id="sweep"]').click();
-  await page.getByLabel("Technique / position").fill("My John Wayne Sweep");
-  await page.getByLabel("Node type", { exact: true }).selectOption("goal");
+  await page.getByLabel("Name").fill("My John Wayne Sweep");
+  await page.getByLabel("Category", { exact: true }).selectOption("submission");
   await page
     .getByRole("button", { name: "Update technique", exact: true })
     .click();
@@ -96,7 +96,7 @@ test("Roll restores a blank device; edits persist and Copy JSON copies the canon
   expect(saved.format).toBe("jitsuka");
   expect(saved.nodes[1]).toEqual({
     ...halfGuardFixture.nodes[1],
-    type: "goal",
+    type: "submission",
     label: "My John Wayne Sweep",
   });
   expect(saved.edges).toEqual(halfGuardFixture.edges);
@@ -104,13 +104,13 @@ test("Roll restores a blank device; edits persist and Copy JSON copies the canon
     await page.evaluate(() => (window as unknown as { copied: string }).copied),
   ).toBe(await json.inputValue());
   const before = await page.evaluate(() =>
-    localStorage.getItem("jitsuka:document:v1"),
+    localStorage.getItem("jitsuka:document:v3"),
   );
   await json.fill('{"format":"bad"}');
   await page.getByRole("button", { name: "Roll", exact: true }).click();
   await expect(page.getByText(/Couldn't roll this map/)).toBeVisible();
   expect(
-    await page.evaluate(() => localStorage.getItem("jitsuka:document:v1")),
+    await page.evaluate(() => localStorage.getItem("jitsuka:document:v3")),
   ).toBe(before);
   await expect(page.locator(".react-flow__node")).toHaveCount(2);
 });
@@ -119,7 +119,7 @@ test("corrupt saved data stays untouched and clipboard failure allows manual cop
   page,
 }) => {
   await page.addInitScript(() => {
-    localStorage.setItem("jitsuka:document:v1", "broken");
+    localStorage.setItem("jitsuka:document:v3", "broken");
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: {
@@ -147,6 +147,6 @@ test("corrupt saved data stays untouched and clipboard failure allows manual cop
     ),
   ).toBe((await json.inputValue()).length);
   expect(
-    await page.evaluate(() => localStorage.getItem("jitsuka:document:v1")),
+    await page.evaluate(() => localStorage.getItem("jitsuka:document:v3")),
   ).toBe("broken");
 });

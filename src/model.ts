@@ -55,7 +55,8 @@ export function safeUrl(value?: string): string | null {
     return null;
   }
 }
-export const sampleMap: GameMap = {
+// Retained only as a pre-document migration fixture, never used for new maps.
+export const legacySampleMap: GameMap = {
   version: 1,
   nodes: [
     {

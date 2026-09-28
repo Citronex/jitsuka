@@ -8,6 +8,7 @@ import {
   useReactFlow,
   type Connection as FlowConnection,
 } from "@xyflow/react";
+import { AreaDelete } from "./components/AreaDelete";
 import { TechniqueNode } from "./components/TechniqueNode";
 import {
   documentToFlow,
@@ -26,8 +27,8 @@ import {
 import { LinkEditor } from "./components/LinkEditor";
 import { AppTools } from "./components/AppTools";
 import { EditLauncher } from "./components/EditLauncher";
-import { ColorChoices, ShapeChoices } from "./components/Choices";
-import { safeUrl, type Connection, type Technique } from "./model";
+import { CategoryChoice } from "./components/Choices";
+import { safeUrl } from "./model";
 import { blankDocument } from "./domain/schema";
 const nodeTypes = { technique: TechniqueNode };
 export function App() {
@@ -46,11 +47,12 @@ export function App() {
     type: "node" | "edge";
     id: string;
   } | null>(null);
+  const [areaDelete, setAreaDelete] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [editPickerOpen, setEditPickerOpen] = useState(false);
   const [addingId, setAddingId] = useState<string | null>(null);
-  const [color, setColor] = useState<Technique["color"]>("blue");
-  const [connector, setConnector] = useState<Connection["kind"] | null>(null);
+  const [category, setCategory] = useState<JitsukaNode["type"] | "">("");
+  const [connector, setConnector] = useState<"solid" | "dashed" | null>(null);
   const [start, setStart] = useState<string | null>(null);
   const titleRef = useRef<HTMLInputElement>(null);
   const edgeRef = useRef<HTMLTextAreaElement>(null);
@@ -121,8 +123,8 @@ export function App() {
             target: connection.target,
             label: "",
             appearance: {
-              arrow: connector === "line" ? "none" : "end",
-              line: "solid",
+              arrow: "end",
+              line: connector ?? "solid",
               sourceAnchor:
                 connection.sourceHandle === "top" ? "top" : "bottom",
               targetAnchor:
@@ -161,7 +163,8 @@ export function App() {
     setSelected(null);
     titleRef.current?.blur();
   }
-  function addTechnique(shape: Technique["shape"]) {
+  function addTechnique() {
+    if (!category) return;
     const bounds = document.querySelector("main")!.getBoundingClientRect();
     const position = flow.screenToFlowPosition({
       x: bounds.left + bounds.width / 2,
@@ -174,9 +177,8 @@ export function App() {
         ...m.nodes,
         {
           id,
-          type: "technique",
+          type: category,
           label: "New technique",
-          appearance: { shape, color },
           position,
         },
       ],
@@ -216,6 +218,7 @@ export function App() {
       className={`app ${presentation ? "presentation" : ""}`}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
+          setAreaDelete(false);
           setSelected(null);
           setStart(null);
           setConnector(null);
@@ -290,6 +293,7 @@ export function App() {
             <button
               className="primary"
               onClick={() => {
+                setAreaDelete(false);
                 setPresentation(!presentation);
                 setSelected(null);
                 setConnector(null);
@@ -394,7 +398,41 @@ export function App() {
           />
           <Controls showInteractive={false} />
         </ReactFlow>
-        <div className="editor-dock">
+        {areaDelete && !presentation && (
+          <AreaDelete
+            onCancel={() => setAreaDelete(false)}
+            onDelete={(ids) => {
+              const deleted = new Set(ids);
+              update((current) => ({
+                ...current,
+                nodes: current.nodes.filter((node) => !deleted.has(node.id)),
+                edges: current.edges.filter(
+                  (edge) =>
+                    !deleted.has(edge.source) && !deleted.has(edge.target),
+                ),
+              }));
+              setSelected(null);
+              setAddingId(null);
+              setAreaDelete(false);
+            }}
+          />
+        )}
+        <div className="editor-dock" hidden={areaDelete}>
+          {!presentation && (
+            <button
+              className="panel area-delete-button"
+              onClick={() => {
+                setAreaDelete(true);
+                setSelected(null);
+                setConnector(null);
+                setStart(null);
+                setAddOpen(false);
+                setEditPickerOpen(false);
+              }}
+            >
+              Delete an area
+            </button>
+          )}
           {!presentation && (
             <aside className="toolbar panel">
               {!addOpen || node || edge ? (
@@ -421,13 +459,18 @@ export function App() {
                       −
                     </button>
                   </div>
-                  <ShapeChoices onChange={addTechnique} />
-                  <p className="field-caption">Choose a color</p>
-                  <ColorChoices value={color} onChange={setColor} />
+                  <CategoryChoice value={category} onChange={setCategory} />
+                  <button
+                    className="primary add-technique"
+                    disabled={!category}
+                    onClick={addTechnique}
+                  >
+                    Add technique
+                  </button>
                   <hr />
                   <h2>Connect your game</h2>
                   <div className="connector-buttons">
-                    {(["line", "arrow"] as const).map((kind) => (
+                    {(["solid", "dashed"] as const).map((kind) => (
                       <button
                         key={kind}
                         aria-pressed={connector === kind}
@@ -437,7 +480,7 @@ export function App() {
                           setSelected(null);
                         }}
                       >
-                        {kind === "line" ? "— Line" : "→ Arrow"}
+                        {kind === "solid" ? "→ Normal" : "⇢ Fallback"}
                       </button>
                     ))}
                   </div>
@@ -530,7 +573,7 @@ export function App() {
               {node && (
                 <>
                   <label>
-                    Technique / position
+                    Name
                     <input
                       ref={titleRef}
                       value={node.label}
@@ -538,79 +581,63 @@ export function App() {
                       onChange={(e) => patchNode({ label: e.target.value })}
                     />
                   </label>
+                  <CategoryChoice
+                    value={node.type}
+                    onChange={(type) => patchNode({ type })}
+                  />
                   <label>
-                    Type
-                    <select
-                      aria-label="Node type"
-                      value={node.type}
+                    Description
+                    <textarea
+                      rows={3}
+                      value={node.description ?? ""}
+                      placeholder="How to perform it / details to remember"
                       onChange={(event) =>
-                        patchNode({
-                          type: event.target.value as JitsukaNode["type"],
-                        })
+                        patchNode({ description: event.target.value })
                       }
-                    >
-                      <option value="position">Position</option>
-                      <option value="technique">Technique</option>
-                      <option value="reaction">Reaction</option>
-                      <option value="goal">Goal</option>
-                    </select>
+                    />
                   </label>
                   <LinkEditor
                     key={node.id}
                     links={node.links ?? []}
                     onChange={(links) => patchNode({ links })}
                   />
-                  <p className="field-caption">Shape</p>
-                  <ShapeChoices
-                    value={node.appearance?.shape}
-                    onChange={(shape) =>
-                      patchNode({ appearance: { ...node.appearance, shape } })
-                    }
-                  />
-                  <p className="field-caption">Color</p>
-                  <ColorChoices
-                    value={node.appearance?.color as Technique["color"]}
-                    onChange={(color) =>
-                      patchNode({ appearance: { ...node.appearance, color } })
-                    }
-                  />
                 </>
               )}
               {edge && (
                 <>
                   <label>
-                    Action / condition
+                    Transition condition
                     <textarea
                       rows={3}
                       ref={edgeRef}
                       value={edge.label ?? ""}
                       maxLength={120}
-                      placeholder="e.g. Opponent posts hand"
+                      placeholder="e.g. opponent posts, I win the underhook"
                       onChange={(e) => patchEdge({ label: e.target.value })}
                     />
                   </label>
                   <label>
-                    Connector
+                    Path
                     <select
-                      value={
-                        edge.appearance?.arrow === "end" ? "arrow" : "line"
-                      }
+                      value={edge.appearance?.line ?? "solid"}
                       onChange={(e) =>
                         patchEdge({
                           appearance: {
                             ...edge.appearance,
-                            arrow: e.target.value === "line" ? "none" : "end",
+                            arrow: "end",
+                            line:
+                              e.target.value === "dashed" ? "dashed" : "solid",
                           },
                         })
                       }
                     >
-                      <option value="arrow">Directional arrow →</option>
-                      <option value="line">Line —</option>
+                      <option value="solid">Normal / intended →</option>
+                      <option value="dashed">Fallback / alternative ⇢</option>
                     </select>
                   </label>
                   <p className="hint">
-                    What makes the next move available? Add a grip, reaction,
-                    opening, or decision.
+                    When or why is the next move available? Keep technique
+                    instructions in the node description.
                   </p>
                 </>
               )}
@@ -649,7 +676,7 @@ export function App() {
             <p>
               {presentation
                 ? "Switch to Edit to add techniques."
-                : "Choose a shape to add your first technique."}
+                : "Choose a category to add your first technique."}
             </p>
           </div>
         )}

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { sampleMap } from "../../src/model";
+import { sampleMap } from "../../src/domain/fixture";
 test("installed assets, offline editing, map transfer, and reload under Pages path", async ({
   page,
   context,
@@ -25,8 +25,11 @@ test("installed assets, offline editing, map transfer, and reload under Pages pa
   await page
     .getByRole("button", { name: "Add a technique", exact: true })
     .click();
-  await page.getByRole("button", { name: "circle shape" }).click();
-  await page.getByLabel("Technique / position").fill("Offline technique");
+  await page.getByLabel("Category", { exact: true }).selectOption("position");
+  await page
+    .getByRole("button", { name: "Add technique", exact: true })
+    .click();
+  await page.getByLabel("Name").fill("Offline technique");
   await page.reload();
   await expect(
     page.getByText("Offline technique", { exact: true }),

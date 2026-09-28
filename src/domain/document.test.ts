@@ -13,7 +13,7 @@ import {
   STORAGE_KEY,
   LEGACY_STORAGE_KEY,
 } from "../persistence/localJitsukaStorage";
-import { sampleMap } from "../model";
+import { legacySampleMap as sampleMap } from "../model";
 
 function storage() {
   const values = new Map<string, string>();
@@ -39,7 +39,7 @@ describe("portable documents", () => {
     "null",
     "{}",
     JSON.stringify({ ...halfGuardFixture, format: "other" }),
-    JSON.stringify({ ...halfGuardFixture, schemaVersion: 2 }),
+    JSON.stringify({ ...halfGuardFixture, schemaVersion: 99 }),
     JSON.stringify({
       ...halfGuardFixture,
       nodes: [{ ...halfGuardFixture.nodes[0], type: "bogus" }],

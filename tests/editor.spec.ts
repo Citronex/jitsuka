@@ -1,14 +1,14 @@
 import { expect, test } from "@playwright/test";
-import { seedLegacyMap } from "./seed";
+import { seedMap } from "./seed";
 import { halfGuardFixture } from "../src/domain/fixture";
-test.beforeEach(async ({ page }) => seedLegacyMap(page));
+test.beforeEach(async ({ page }) => seedMap(page));
 test("an upward connection leaves the source top and enters the target bottom", async ({
   page,
 }) => {
   const document = structuredClone(halfGuardFixture);
   document.nodes[1].position.y = -250;
   await page.addInitScript(
-    (doc) => localStorage.setItem("jitsuka:document:v1", JSON.stringify(doc)),
+    (doc) => localStorage.setItem("jitsuka:document:v3", JSON.stringify(doc)),
     document,
   );
   await page.goto("/");
@@ -20,8 +20,12 @@ test("an upward connection leaves the source top and enters the target bottom", 
   await expect(path).toHaveCount(1);
   await expect
     .poll(async () => {
-      const from = (await source.locator('[data-handleid="top"]').boundingBox())!;
-      const to = (await target.locator('[data-handleid="bottom"]').boundingBox())!;
+      const from = (await source
+        .locator('[data-handleid="top"]')
+        .boundingBox())!;
+      const to = (await target
+        .locator('[data-handleid="bottom"]')
+        .boundingBox())!;
       const points = await path.evaluate((element: SVGPathElement) => {
         const matrix = element.getScreenCTM()!;
         const start = element.getPointAtLength(0).matrixTransform(matrix);
@@ -46,14 +50,12 @@ test("the edit row opens a technique picker and Cancel is readable", async ({
     .getByRole("button", { name: "Edit a technique", exact: true })
     .click({ position: { x: 30, y: 20 } });
   await page.getByLabel("Choose a technique to edit").selectOption("half");
-  await expect(page.getByLabel("Technique / position")).toHaveValue(
-    "Half Guard",
-  );
+  await expect(page.getByLabel("Name")).toHaveValue("Half Guard");
   await page.getByRole("button", { name: "Close editor" }).click();
   await page
     .getByRole("button", { name: "Add a technique", exact: true })
     .click();
-  await page.getByRole("button", { name: "→ Arrow", exact: true }).click();
+  await page.getByRole("button", { name: "→ Normal", exact: true }).click();
   const cancel = page.getByRole("button", { name: "Cancel", exact: true });
   await expect(cancel).toHaveCSS("background-color", "rgb(24, 89, 163)");
   await expect(cancel).toHaveCSS("color", "rgb(255, 255, 255)");
@@ -71,10 +73,11 @@ test("create, label, persist and delete a connected technique", async ({
   await expect(
     page.getByText("Same-side arm connection", { exact: true }),
   ).toBeVisible();
+  await page.getByLabel("Category", { exact: true }).selectOption("position");
   await page
-    .getByRole("button", { name: "rounded shape", exact: true })
+    .getByRole("button", { name: "Add technique", exact: true })
     .click();
-  await page.getByLabel("Technique / position").fill("Knee Cut");
+  await page.getByLabel("Name").fill("Knee Cut");
   await page
     .getByLabel("Video or reference link")
     .fill("https://www.youtube.com/watch?v=example");
@@ -82,7 +85,7 @@ test("create, label, persist and delete a connected technique", async ({
   await page
     .getByRole("button", { name: "Add a technique", exact: true })
     .click();
-  await page.getByRole("button", { name: "→ Arrow", exact: true }).click();
+  await page.getByRole("button", { name: "→ Normal", exact: true }).click();
   await page
     .locator(".react-flow__node")
     .filter({ hasText: "Half Guard" })
@@ -92,8 +95,8 @@ test("create, label, persist and delete a connected technique", async ({
     .locator(".react-flow__node")
     .filter({ hasText: "Knee Cut" })
     .click();
-  await expect(page.getByLabel("Action / condition")).toBeFocused();
-  await page.getByLabel("Action / condition").fill("Win the underhook");
+  await expect(page.getByLabel("Transition condition")).toBeFocused();
+  await page.getByLabel("Transition condition").fill("Win the underhook");
   await page.reload();
   await expect(
     page.getByText("Win the underhook", { exact: true }),
@@ -124,7 +127,7 @@ test("create, label, persist and delete a connected technique", async ({
     .locator(".react-flow__node")
     .filter({ hasText: "Knee Cut" })
     .click();
-  await expect(page.getByLabel("Technique / position")).toHaveValue("Knee Cut");
+  await expect(page.getByLabel("Name")).toHaveValue("Knee Cut");
   expect(errors).toEqual([]);
   await page.getByRole("button", { name: "Delete technique" }).click();
   await expect(
@@ -140,8 +143,11 @@ test("phone layout supports adding and editing", async ({ page }) => {
   await page
     .getByRole("button", { name: "Add a technique", exact: true })
     .click();
-  await page.getByRole("button", { name: "circle shape" }).click();
-  await page.getByLabel("Technique / position").fill("Side Control");
+  await page.getByLabel("Category", { exact: true }).selectOption("position");
+  await page
+    .getByRole("button", { name: "Add technique", exact: true })
+    .click();
+  await page.getByLabel("Name").fill("Side Control");
   await expect(
     page.getByRole("button", { name: "Delete technique" }),
   ).toBeInViewport();
@@ -197,7 +203,7 @@ test("connection labels preserve Enter line breaks on the map and after reload",
   await page
     .locator('.react-flow__edge[data-id="e1"] .react-flow__edge-textbg')
     .click();
-  const field = page.getByLabel("Action / condition");
+  const field = page.getByLabel("Transition condition");
   await field.fill("Opponent posts");
   await field.press("Enter");
   await field.pressSequentially("same-side hand!");
@@ -212,7 +218,7 @@ test("connection labels preserve Enter line breaks on the map and after reload",
   await expect(lines).toHaveText(["Opponent posts", "same-side hand"]);
 });
 
-test("unlinked nodes are silent and editing panels stack with one color picker", async ({
+test("unlinked nodes are silent and editing panels stack without color pickers", async ({
   page,
 }) => {
   await page.goto("/");
@@ -232,7 +238,7 @@ test("unlinked nodes are silent and editing panels stack with one color picker",
   await expect(toolbar.getByRole("button", { name: "blue color" })).toHaveCount(
     0,
   );
-  await expect(page.getByRole("button", { name: "blue color" })).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "blue color" })).toHaveCount(0);
   const top = (await toolbar.boundingBox())!;
   const bottom = (await inspector.boundingBox())!;
   expect(bottom.x).toBe(top.x);
@@ -251,30 +257,32 @@ test("Add and Update finish a technique without leaving Edit mode or duplicating
   await page
     .getByRole("button", { name: "Add a technique", exact: true })
     .click();
+  await page.getByLabel("Category", { exact: true }).selectOption("position");
   await page
-    .getByRole("button", { name: "rounded shape", exact: true })
+    .getByRole("button", { name: "Add technique", exact: true })
     .click();
-  await page.getByLabel("Technique / position").fill("Butterfly Guard");
+  await page.getByLabel("Name").fill("Butterfly Guard");
+  await page.getByLabel("Category", { exact: true }).selectOption("position");
   await page
     .getByRole("button", { name: "Add technique", exact: true })
     .click();
   await expect(
     page.getByRole("button", { name: "Done editing" }),
   ).toBeVisible();
-  await expect(page.getByLabel("Technique / position")).toHaveCount(0);
+  await expect(page.getByLabel("Name")).toHaveCount(0);
   await expect(page.locator(".react-flow__node")).toHaveCount(6);
   await page
     .locator(".react-flow__node")
     .filter({ hasText: "Butterfly Guard" })
     .click();
-  await page.getByLabel("Technique / position").fill("Butterfly Sweep");
+  await page.getByLabel("Name").fill("Butterfly Sweep");
   await page
     .getByRole("button", { name: "Update technique", exact: true })
     .click();
   await expect(
     page.getByRole("button", { name: "Done editing" }),
   ).toBeVisible();
-  await expect(page.getByLabel("Technique / position")).toHaveCount(0);
+  await expect(page.getByLabel("Name")).toHaveCount(0);
   await expect(page.locator(".react-flow__node")).toHaveCount(6);
   await page.reload();
   await expect(
@@ -293,27 +301,31 @@ test("edit mode starts minimized and opens the panel for the canvas target", asy
   await expect(
     page.getByRole("complementary", { name: "Edit a technique collapsed" }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "rounded shape" })).toHaveCount(
-    0,
-  );
-  await page
-    .locator(".react-flow__pane")
-    .click({ position: { x: 1100, y: 40 } });
   await expect(
-    page.locator(".toolbar").getByRole("button", { name: "rounded shape" }),
-  ).toBeVisible();
-  await page.locator('.react-flow__node[data-id="half"]').click();
-  await expect(page.getByLabel("Technique / position")).toHaveValue(
-    "Half Guard",
-  );
-  await expect(
-    page.locator(".toolbar").getByRole("button", { name: "rounded shape" }),
+    page.getByRole("button", { name: "Add technique", exact: true }),
   ).toHaveCount(0);
   await page
     .locator(".react-flow__pane")
     .click({ position: { x: 1100, y: 40 } });
-  await expect(page.getByLabel("Technique / position")).toHaveCount(0);
   await expect(
-    page.locator(".toolbar").getByRole("button", { name: "rounded shape" }),
+    page
+      .locator(".toolbar")
+      .getByRole("button", { name: "Add technique", exact: true }),
+  ).toBeVisible();
+  await page.locator('.react-flow__node[data-id="half"]').click();
+  await expect(page.getByLabel("Name")).toHaveValue("Half Guard");
+  await expect(
+    page
+      .locator(".toolbar")
+      .getByRole("button", { name: "Add technique", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .locator(".react-flow__pane")
+    .click({ position: { x: 1100, y: 40 } });
+  await expect(page.getByLabel("Name")).toHaveCount(0);
+  await expect(
+    page
+      .locator(".toolbar")
+      .getByRole("button", { name: "Add technique", exact: true }),
   ).toBeVisible();
 });

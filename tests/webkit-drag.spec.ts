@@ -1,6 +1,6 @@
 import { expect, test, devices } from "@playwright/test";
-import { seedLegacyMap } from "./seed";
-test.beforeEach(async ({ page }) => seedLegacyMap(page));
+import { seedMap } from "./seed";
+test.beforeEach(async ({ page }) => seedMap(page));
 test.use({ ...devices["iPhone 13"], browserName: "webkit" });
 test("WebKit keeps every technique visible on each drag frame", async ({
   page,
@@ -10,8 +10,9 @@ test("WebKit keeps every technique visible on each drag frame", async ({
   await page
     .getByRole("button", { name: "Add a technique", exact: true })
     .click();
-  await page.getByRole("button", { name: "rounded shape", exact: true }).tap();
-  await page.getByLabel("Technique / position").fill("Safari drag");
+  await page.getByLabel("Category", { exact: true }).selectOption("position");
+  await page.getByRole("button", { name: "Add technique", exact: true }).tap();
+  await page.getByLabel("Name").fill("Safari drag");
   const node = page
     .locator(".react-flow__node")
     .filter({ hasText: "Safari drag" });

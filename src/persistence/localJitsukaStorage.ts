@@ -3,7 +3,9 @@ import {
   parseJitsukaDocument,
   serializeJitsukaDocument,
 } from "../domain/serialization";
-export const STORAGE_KEY = "jitsuka:document:v1";
+export const STORAGE_KEY = "jitsuka:document:v3";
+export const V2_STORAGE_KEY = "jitsuka:document:v2";
+export const V1_STORAGE_KEY = "jitsuka:document:v1";
 export const LEGACY_STORAGE_KEY = "jitsuka.map.v1";
 export type StoragePort = Pick<Storage, "getItem" | "setItem">;
 
@@ -17,7 +19,10 @@ export function loadLocalJitsukaDocument(
   storage: StoragePort = window.localStorage,
 ): JitsukaDocument | null {
   const raw =
-    storage.getItem(STORAGE_KEY) ?? storage.getItem(LEGACY_STORAGE_KEY);
+    storage.getItem(STORAGE_KEY) ??
+    storage.getItem(V2_STORAGE_KEY) ??
+    storage.getItem(V1_STORAGE_KEY) ??
+    storage.getItem(LEGACY_STORAGE_KEY);
   return raw === null ? null : parseJitsukaDocument(raw);
 }
 export function restoreLocalDocument() {

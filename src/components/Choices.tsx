@@ -1,46 +1,30 @@
-import { colors, shapes, type Technique } from "../model";
-export function ShapeChoices({
+import { nodeTypes, type JitsukaNodeType } from "../domain/schema";
+export function CategoryChoice({
   value,
   onChange,
 }: {
-  value?: Technique["shape"];
-  onChange: (shape: Technique["shape"]) => void;
+  value: JitsukaNodeType | "";
+  onChange: (category: JitsukaNodeType) => void;
 }) {
   return (
-    <div className="choices">
-      {shapes.map((shape) => (
-        <button
-          key={shape}
-          title={shape}
-          aria-label={`${shape} shape`}
-          aria-pressed={value === shape}
-          onClick={() => onChange(shape)}
-        >
-          <span className={`shape-icon ${shape}`} />
-        </button>
-      ))}
-    </div>
-  );
-}
-export function ColorChoices({
-  value,
-  onChange,
-}: {
-  value: Technique["color"];
-  onChange: (color: Technique["color"]) => void;
-}) {
-  return (
-    <div className="choices">
-      {colors.map((color) => (
-        <button
-          key={color}
-          aria-label={`${color} color`}
-          aria-pressed={value === color}
-          onClick={() => onChange(color)}
-        >
-          <span className={`swatch ${color}`} />
-        </button>
-      ))}
-    </div>
+    <label>
+      Category
+      <select
+        aria-label="Category"
+        value={value}
+        onChange={(event) => onChange(event.target.value as JitsukaNodeType)}
+      >
+        {value === "" && (
+          <option value="" disabled>
+            Select your BJJ concept
+          </option>
+        )}
+        {nodeTypes.map((type) => (
+          <option key={type} value={type}>
+            {type[0].toUpperCase() + type.slice(1)}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }

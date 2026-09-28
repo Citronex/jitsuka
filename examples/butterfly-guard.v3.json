@@ -1,0 +1,174 @@
+{
+  "format": "jitsuka",
+  "schemaVersion": 3,
+  "metadata": {
+    "title": "Butterfly Guard Principles — Marcelo Garcia",
+    "description": "A study map of the video's butterfly guard options: seated posture and distance management, connected guard transitions, underhook control, sweeps, and a low single-leg takedown."
+  },
+  "nodes": [
+    {
+      "id": "butterfly-guard",
+      "type": "guard",
+      "label": "Seated Butterfly Guard",
+      "description": "Sit upright and use your legs and arms to control the opponent, manage distance, and keep attacks connected. Adjust to the opponent's movement instead of treating each option as an isolated technique.",
+      "position": {
+        "x": -81.87272727272726,
+        "y": 5.027272727272724
+      },
+      "links": [
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=0WG1MYvgXAM",
+          "label": "Marcelo Garcia: Most Important Principles"
+        }
+      ]
+    },
+    {
+      "id": "shin-to-shin",
+      "type": "guard",
+      "label": "Shin-to-Shin Guard",
+      "description": "Use this guard connection as an option when managing distance from seated butterfly guard.",
+      "position": {
+        "x": 208.07272727272732,
+        "y": -179.28181818181818
+      },
+      "links": [
+        {
+          "type": "video",
+          "url": "https://youtube.com/shorts/d4S5GnB_qnE?si=7_BLoYaePTbCMEE-"
+        }
+      ]
+    },
+    {
+      "id": "x-guard",
+      "type": "guard",
+      "label": "X-Guard",
+      "description": "A connected guard transition shown among the butterfly guard options.",
+      "position": {
+        "x": 642.3727272727273,
+        "y": -182.87272727272727
+      },
+      "links": [
+        {
+          "type": "video",
+          "url": "https://youtube.com/shorts/5QYou7Rec5o?si=Lixo2_8XR7f7bU_T"
+        }
+      ]
+    },
+    {
+      "id": "underhook-control",
+      "type": "position",
+      "label": "Underhook Control",
+      "description": "Use underhooks to control the opponent's arms and connect upper-body control to your butterfly guard attacks.",
+      "position": {
+        "x": 392.6454545454546,
+        "y": 96.23636363636363
+      }
+    },
+    {
+      "id": "idiot-sweep",
+      "type": "sweep",
+      "label": "Dummy Sweep",
+      "description": "A sweep option demonstrated from butterfly guard.",
+      "position": {
+        "x": 664.6363636363639,
+        "y": -35.90909090909091
+      },
+      "links": [
+        {
+          "type": "video",
+          "url": "https://youtube.com/shorts/xcU7vpxJiCQ?si=jKqIjpmHJEVQ5OU9"
+        }
+      ]
+    },
+    {
+      "id": "low-single",
+      "type": "takedown",
+      "label": "Low Single-Leg Takedown",
+      "description": "A low single-leg attack shown as another option from the seated butterfly position.",
+      "position": {
+        "x": 201.60909090909087,
+        "y": 276.9545454545455
+      }
+    },
+    {
+      "id": "butterfly-sweep",
+      "type": "sweep",
+      "label": "Butterfly Elevation Sweep",
+      "description": "Use the butterfly hooks and upper-body control to elevate or off-balance the opponent.",
+      "position": {
+        "x": 633.7545454545455,
+        "y": 259.71818181818185
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "butterfly-to-shin",
+      "source": "butterfly-guard",
+      "target": "shin-to-shin",
+      "label": "manage distance",
+      "appearance": {
+        "line": "solid",
+        "arrow": "end",
+        "sourceAnchor": "top",
+        "targetAnchor": "top"
+      }
+    },
+    {
+      "id": "shin-to-x",
+      "source": "shin-to-shin",
+      "target": "x-guard",
+      "label": "transition",
+      "appearance": {
+        "line": "solid",
+        "arrow": "end"
+      }
+    },
+    {
+      "id": "butterfly-to-underhook",
+      "source": "butterfly-guard",
+      "target": "underhook-control",
+      "label": "control the arms",
+      "appearance": {
+        "line": "solid",
+        "arrow": "end"
+      }
+    },
+    {
+      "id": "underhook-to-butterfly-sweep",
+      "source": "underhook-control",
+      "target": "butterfly-sweep",
+      "label": "connect control to elevation",
+      "appearance": {
+        "line": "solid",
+        "arrow": "end"
+      }
+    },
+    {
+      "id": "butterfly-to-idiot-sweep",
+      "source": "butterfly-guard",
+      "target": "idiot-sweep",
+      "label": "opponent gets up",
+      "appearance": {
+        "line": "solid",
+        "arrow": "end"
+      }
+    },
+    {
+      "id": "butterfly-to-low-single",
+      "source": "butterfly-guard",
+      "target": "low-single",
+      "label": "takedown option",
+      "appearance": {
+        "line": "solid",
+        "arrow": "end"
+      }
+    }
+  ],
+  "viewport": {
+    "x": 188.7478444354221,
+    "y": 366.96125972731505,
+    "zoom": 1.174188993722743
+  }
+}

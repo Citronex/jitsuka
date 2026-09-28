@@ -1,6 +1,6 @@
 import { expect, test, devices } from "@playwright/test";
-import { seedLegacyMap } from "./seed";
-test.beforeEach(async ({ page }) => seedLegacyMap(page));
+import { seedMap } from "./seed";
+test.beforeEach(async ({ page }) => seedMap(page));
 test.use({ ...devices["Pixel 7"], defaultBrowserType: "chromium" });
 test("newly named technique can be dragged with touch without losing the map", async ({
   page,
@@ -13,16 +13,14 @@ test("newly named technique can be dragged with touch without losing the map", a
   await page
     .getByRole("button", { name: "Add a technique", exact: true })
     .click();
-  await page.getByRole("button", { name: "rounded shape", exact: true }).tap();
-  await page.getByLabel("Technique / position").fill("Mobile drag");
+  await page.getByLabel("Category", { exact: true }).selectOption("position");
+  await page.getByRole("button", { name: "Add technique", exact: true }).tap();
+  await page.getByLabel("Name").fill("Mobile drag");
   const node = page
     .locator(".react-flow__node")
     .filter({ hasText: "Mobile drag" });
   const bounds = (await node.boundingBox())!;
-  await expect(page.getByLabel("Technique / position")).toHaveCSS(
-    "font-size",
-    "16px",
-  );
+  await expect(page.getByLabel("Name")).toHaveCSS("font-size", "16px");
   await page.evaluate(() => {
     const hiddenNodes: string[] = [];
     Object.assign(window, { hiddenNodes });
@@ -60,7 +58,7 @@ test("newly named technique can be dragged with touch without losing the map", a
     type: "touchEnd",
     touchPoints: [],
   });
-  await expect(page.getByLabel("Technique / position")).toBeVisible();
+  await expect(page.getByLabel("Name")).toBeVisible();
   await expect(node).toBeVisible();
   await expect(page.locator(".react-flow__node")).toHaveCount(6);
   expect(errors).toEqual([]);
@@ -71,11 +69,15 @@ test("newly named technique can be dragged with touch without losing the map", a
   expect(end.y).toBeGreaterThan(bounds.y + 40);
   await expect
     .poll(() =>
-      page.evaluate(() => localStorage.getItem("jitsuka:document:v1")),
+      page.evaluate(() =>
+        JSON.parse(
+          localStorage.getItem("jitsuka:document:v3") ?? '{"nodes":[]}',
+        ).nodes.some((node: { label: string }) => node.label === "Mobile drag"),
+      ),
     )
-    .not.toBeNull();
+    .toBe(true);
   const saved = await page.evaluate(() =>
-    JSON.parse(localStorage.getItem("jitsuka:document:v1")!),
+    JSON.parse(localStorage.getItem("jitsuka:document:v3")!),
   );
   const moved = saved.nodes.find(
     (n: { label: string }) => n.label === "Mobile drag",
@@ -97,8 +99,9 @@ test("interrupted edge drag stops moving the canvas after fingers lift", async (
   await page
     .getByRole("button", { name: "Add a technique", exact: true })
     .click();
-  await page.getByRole("button", { name: "rounded shape", exact: true }).tap();
-  await page.getByLabel("Technique / position").fill("Interrupted drag");
+  await page.getByLabel("Category", { exact: true }).selectOption("position");
+  await page.getByRole("button", { name: "Add technique", exact: true }).tap();
+  await page.getByLabel("Name").fill("Interrupted drag");
   await page.getByRole("button", { name: "Close editor" }).tap();
   const node = page
     .locator(".react-flow__node")
@@ -141,4 +144,43 @@ test("interrupted edge drag stops moving the canvas after fingers lift", async (
   const stopped = await viewport.getAttribute("style");
   await page.waitForTimeout(600);
   expect(await viewport.getAttribute("style")).toBe(stopped);
+});
+
+test("touch can draw a deletion area without panning the map", async ({
+  page,
+  context,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Edit map" }).tap();
+  await page.getByRole("button", { name: "Delete an area" }).tap();
+  const target = page.locator(".react-flow__node").first();
+  const bounds = (await target.boundingBox())!;
+  const client = await context.newCDPSession(page);
+  const x = bounds.x - 5,
+    y = bounds.y - 5;
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [{ x, y }],
+  });
+  for (let i = 1; i <= 8; i++)
+    await client.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [
+        {
+          x: x + ((bounds.width + 10) * i) / 8,
+          y: y + ((bounds.height + 10) * i) / 8,
+        },
+      ],
+    });
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchEnd",
+    touchPoints: [],
+  });
+  await expect(
+    page.getByRole("button", { name: "Delete selected" }),
+  ).toBeEnabled();
+  expect((await target.boundingBox())!.x).toBeCloseTo(bounds.x, 0);
+  await page.getByRole("button", { name: "Delete selected" }).tap();
+  await expect(page.locator(".react-flow__node")).toHaveCount(4);
+  await expect(page.locator(".react-flow__edge")).toHaveCount(2);
 });

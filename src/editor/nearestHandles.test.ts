@@ -3,7 +3,7 @@ import { nearestHandles } from "./nearestHandles";
 import type { JitsukaNode } from "../domain/schema";
 const node = (x: number, y: number): JitsukaNode => ({
   id: "node",
-  type: "technique",
+  type: "position",
   label: "Technique",
   position: { x, y },
 });
