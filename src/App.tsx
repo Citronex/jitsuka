@@ -430,7 +430,7 @@ export function App() {
                 setEditPickerOpen(false);
               }}
             >
-              Delete an area
+              Delete an area <span aria-hidden="true">−</span>
             </button>
           )}
           {!presentation && (

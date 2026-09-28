@@ -701,9 +701,19 @@ textarea {
   font-size: 13px;
   font-weight: 600;
 }
-.editor-dock .panel:has(> .expand-tools[aria-expanded="false"]) {
-  width: fit-content;
+.editor-dock .panel:has(> .expand-tools[aria-expanded="false"]),
+.editor-dock .area-delete-button {
+  width: 172px;
+  min-height: 78px;
   max-width: 100%;
+}
+@media (max-width: 600px) {
+  .editor-dock .panel:has(> .expand-tools[aria-expanded="false"]),
+  .editor-dock .area-delete-button {
+    width: 160px;
+    min-height: 66px;
+    padding: 12px;
+  }
 }
 .app-tools-panel .close-map {
   margin-left: auto;
@@ -800,4 +810,11 @@ textarea {
 }
 .area-delete-button {
   color: #991b1b;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.area-delete-button span {
+  font-size: 20px;
 }
