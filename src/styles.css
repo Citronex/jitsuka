@@ -610,8 +610,12 @@ textarea {
   background: transparent;
   text-align: left;
 }
-.expand-tools span {
+.expand-tools span,
+.area-delete-button span {
   font-size: 20px;
+  margin-left: auto;
+  flex: 0 0 20px;
+  text-align: center;
 }
 @media (max-width: 600px) {
   .editor-dock {
@@ -814,7 +818,4 @@ textarea {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-.area-delete-button span {
-  font-size: 20px;
 }
