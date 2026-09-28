@@ -1,3 +1,4 @@
+import { blankDocument } from "../src/domain/schema";
 import { expect, test } from "@playwright/test";
 import { nodeTypes } from "../src/domain/schema";
 import { NODE_STYLE_BY_TYPE } from "../src/editor/nodeShapes";
@@ -12,6 +13,10 @@ const rgb = (hex: string) =>
 test("categories drive shapes through edits, reload and portable JSON", async ({
   page,
 }) => {
+  await page.addInitScript((blank) => {
+    if (!localStorage.getItem("jitsuka:document:v3"))
+      localStorage.setItem("jitsuka:document:v3", JSON.stringify(blank));
+  }, blankDocument());
   await page.addInitScript(() =>
     Object.defineProperty(navigator, "clipboard", {
       value: { writeText: async () => {} },

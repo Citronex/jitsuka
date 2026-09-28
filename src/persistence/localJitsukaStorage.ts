@@ -1,4 +1,5 @@
 import { blankDocument, type JitsukaDocument } from "../domain/schema";
+import starterMap from "../../examples/butterfly-guard.v3.json";
 import {
   parseJitsukaDocument,
   serializeJitsukaDocument,
@@ -25,10 +26,16 @@ export function loadLocalJitsukaDocument(
     storage.getItem(LEGACY_STORAGE_KEY);
   return raw === null ? null : parseJitsukaDocument(raw);
 }
-export function restoreLocalDocument() {
+export function restoreLocalDocument(
+  storage: StoragePort = window.localStorage,
+) {
   try {
+    const saved = loadLocalJitsukaDocument(storage);
+    const document = saved ?? parseJitsukaDocument(JSON.stringify(starterMap));
+    // Fit the starter to this device rather than reuse the example's desktop viewport.
+    if (!saved) delete document.viewport;
     return {
-      document: loadLocalJitsukaDocument() ?? blankDocument(),
+      document,
       error: null,
     };
   } catch {

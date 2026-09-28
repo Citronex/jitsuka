@@ -24,7 +24,7 @@ Open the address printed by Vite. `npm run build` type-checks and creates the pr
 - Pan the background, scroll or use controls to zoom, and pinch on touch screens.
 - View mode hides editing controls; tapping a technique opens its HTTP(S) reference in a new tab.
 
-New devices start with a blank canvas. Maps save automatically in this browser's local storage, debounced by 350 ms and flushed when the page is hidden or closed. Clearing browser data removes the map; there is no cross-device sync.
+New devices start with the Butterfly Guard example, fitted to the screen. Existing saved maps, including intentionally empty maps, take precedence. Maps save automatically in this browser's local storage, debounced by 350 ms and flushed when the page is hidden or closed. Clearing browser data removes the map; there is no cross-device sync.
 
 Opening **My map** shows the current map's JSON. Paste or edit a Jitsuka JSON document and press **Roll** to apply it to the map. Invalid data leaves the current map untouched. **Copy JSON** copies the current map to your clipboard; if copying is unavailable, the JSON is selected for manual copying. **Take your roll** downloads a JSON file; **Feed your roll** loads one. Reopening the panel refreshes the JSON from the current map.
 

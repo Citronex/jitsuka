@@ -1,3 +1,4 @@
+import { blankDocument } from "../src/domain/schema";
 import { expect, test } from "@playwright/test";
 import { halfGuardFixture } from "../src/domain/fixture";
 
@@ -39,6 +40,10 @@ test("Clear roll confirms, clears only the canvas, and preserves the saved roll"
 test("Roll restores a blank device; edits persist and Copy JSON copies the canonical document", async ({
   page,
 }) => {
+  await page.addInitScript((blank) => {
+    if (!localStorage.getItem("jitsuka:document:v3"))
+      localStorage.setItem("jitsuka:document:v3", JSON.stringify(blank));
+  }, blankDocument());
   await page.addInitScript(() =>
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
